@@ -1,0 +1,21 @@
+{
+    "name": "botinplace/tc4u",
+	"type": "library",
+    "description": "The ts4u PHP mvc framework",
+	"keywords": ["framework", "dev","php","mvc"],
+    "homepage": "https://tc4u.ru",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Artyom Prigoda"
+        }
+	],
+	"require": {
+        "php": ">=7.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "Core\\": "Core/"
+        }
+    }
+}
