@@ -13,7 +13,7 @@ class Application {
     public function __construct() {
 		// Загрузка конфигурации
 
-        $this->config = $this->loadFile(__DIR__ . '/Configs/Config.php');
+        $this->config = $this->loadFile(APP . '/Config.php');
 		
 		// Загрузка маршрутов из файла
         $this->routes = $this->loadFile(APP . 'routes.php');
