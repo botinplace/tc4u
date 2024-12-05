@@ -12,7 +12,8 @@ class Application {
     private $router;    
     public function __construct() {
 		// Загрузка конфигурации
-        $this->config = $this->loadFile(ROOT . 'Core/Configs/Config.php');
+
+        $this->config = $this->loadFile(__DIR__ . '/Configs/Config.php');
 		
 		// Загрузка маршрутов из файла
         $this->routes = $this->loadFile(APP . 'routes.php');
@@ -27,9 +28,9 @@ class Application {
 
     private function initializeRouter() {        
 		//Подключение роутера
-		$phpVersionClass = (PHP_VERSION_ID < 80000) ? 'Core/Router7.php' : 'Core/Router.php';
-		require_once ROOT . $phpVersionClass;
-		$this->router = new Core\Router();
+		$phpVersionClass = (PHP_VERSION_ID < 80000) ? '/Router7.php' : '/Router7.php';
+		require_once __DIR__ . $phpVersionClass;
+		$this->router = new Router();
 
         // Получение текущего пути и метода
         $this->dispatchCurrentRoute();
