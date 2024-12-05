@@ -1,7 +1,5 @@
 <?php
-declare(strict_types=1);
-
-require_once ROOT.'vendor/autoload.php';
+namespace Core;
 
 if (file_exists($_SERVER['SCRIPT_FILENAME']) && pathinfo($_SERVER['SCRIPT_FILENAME'], PATHINFO_EXTENSION) !== 'php') {
     return;
