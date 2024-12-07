@@ -2,6 +2,9 @@
 namespace Core;
 
 class Model {
+	function __construct(){
+		
+	}
     public static function create($dbType, $dbConfig) {
         switch ($dbType) {
             case 'mysql':
