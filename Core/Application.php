@@ -1,6 +1,8 @@
 <?php
 namespace Core;
 
+use Core\Request;
+
 if (file_exists($_SERVER['SCRIPT_FILENAME']) && pathinfo($_SERVER['SCRIPT_FILENAME'], PATHINFO_EXTENSION) !== 'php') {
     return;
 }
@@ -12,7 +14,6 @@ class Application {
     private $router;    
     public function __construct() {
 		// Загрузка конфигурации
-
         $this->config = $this->loadFile(APP . '/Config.php');
 		
 		// Загрузка маршрутов из файла

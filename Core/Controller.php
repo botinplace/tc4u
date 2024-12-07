@@ -1,8 +1,6 @@
 <?php
 namespace Core;
 
-use Core\Request;
-
 class Controller {
     public $baseTemplate = 'base';
     public $contentFile = '';
@@ -14,17 +12,27 @@ class Controller {
     public $get_main_block_only = false;
     public $pagedata;
     private $fast_array;
-    private $request;
 
-    public function __construct($pagedata) {
+    public function __construct($pagedata) {		
         $this->pagedata = $pagedata;
-        $this->xmlhttprequest = $this->isAjaxRequest();
+        $this->xmlhttprequest = Request::isAjax();
         $this->baseTemplate = $pagedata['basetemplate']?:'base';
         $this->contentFile = $pagedata['contentFile'];
-        $this->content = $this->loadContent($this->contentFile);
-        $this->request = new Request();
+        $this->content = $this->loadContent($this->contentFile);        
+		$this->get_main_block_only = ( Request::get('GetMainContentOnly') && !empty( Request::get('GetMainContentOnly') ) && (bool)Request::get('GetMainContentOnly') ) ? true : false;
     }
     
+	function includeCSS($files) {
+		if (!is_array($files)) {
+			$files = array($files);
+		}
+
+		foreach ($files as $file) {
+			if (file_exists(SITE . $file)) {
+				echo '<link rel="stylesheet" href="' . URI_FIXER . BASE_URL . $file . '?v=' . filemtime(SITE . $file) . '" type="text/css">' . PHP_EOL;
+			}
+		}
+	}
     public function renderEmptyPage() {
         $this->content = $this->content ?: 'СТРАНИЦА В РАЗРАБОТКЕ';
         $this->render();
@@ -39,17 +47,12 @@ class Controller {
         }
     }
     
-    private function isAjaxRequest(): bool {
-        return !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
-               in_array(strtolower($_SERVER['HTTP_X_REQUESTED_WITH']), ['xmlhttprequest', 'fetch']);
-    }
-
     private function loadContent(string $contentFile): string {
         $filePath = APP . 'Content/' . ucfirst($contentFile) . 'Content.html';
         return file_exists($filePath) ? file_get_contents($filePath) : '';
     }
 
-    public function render(array $extra_vars = []) {
+    public final function render(array $extra_vars = []) {
         ob_get_clean();
 		
         if (!$this->page_not_found) {
