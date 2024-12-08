@@ -1,11 +1,16 @@
 <?php 
-class DB{
+namespace Core\DB\ClassPostgre;
+
+use Core\DB\DatabaseInterface;
+use \PDO;
+
+class DB implements DatabaseInterface{
     private static $dsn = "pgsql:host=" . POSTGRESQL_HOST . ";port=5432;dbname=" . POSTGRESQL_NAME . "; options='--client_encoding=UTF8'";
     private static $user = POSTGRESQL_USER;
     private static $pass = POSTGRESQL_PASS;
     private static $dbh = null;
 
-    public static function getDbh()
+    private static function getDbh()
     {
         if (!self::$dbh) {
             try {

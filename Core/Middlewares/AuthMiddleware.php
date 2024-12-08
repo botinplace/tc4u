@@ -1,9 +1,12 @@
 <?php
 namespace Core\Middelwares;
 
-class AuthMiddleware {
+use Core\Middleware;
+use Core\Request;
+
+class AuthMiddleware extends Middleware {
     // Метод для проверки аутентификации
-    public function handleRequest() {
+    public function handleRequest(Request $request, callable $next) {
         // Проверяем, имеется ли сессия или токен аутентификации
         if (!$this->isAuthenticated()) {
             // Если нет, перенаправляем на страницу входа
