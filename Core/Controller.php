@@ -113,6 +113,7 @@ class Controller {
                 : (is_array($value) ? 'Array' : (is_object($value) ? 'Object' : ''));
         }
         $fast_array['{{this_project_version}}'] = 'v.1.0.0';
+		$fast_array['{{SITE_URI}}'] = FIXED_URL;
         return $fast_array;
     }
 
