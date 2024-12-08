@@ -1,7 +1,7 @@
 <?php
 namespace Core\Config;
 
-static class Config{    
+class Config{    
 	public static function loadConfig($configFilePath) {
         if (file_exists($configFilePath)) {
             require $configFilePath;
