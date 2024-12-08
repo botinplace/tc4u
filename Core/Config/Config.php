@@ -15,7 +15,7 @@ class Config{
 	private static function defineDefaultConstants() {
 			if (!defined('URI_FIXER')) {
 				$scriptName = $_SERVER['SCRIPT_NAME'];
-				define('URI_FIXER', dirname($scriptName));
+				define('URI_FIXER', dirname(dirname($scriptName)));
 			}
 		}
 }
