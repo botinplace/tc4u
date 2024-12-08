@@ -7,7 +7,7 @@ class Config{
             require $configFilePath;
         } else {            
             self::defineDefaultConstants();
-			die('Создайте файл "config.php" в папке Config на основе файла config.sample.php');
+			echo '<div style="background:red;color:white;padding:20px;position:absolute;top:0;left:0;right:0;">Создайте файл "config.php" в папке Config на основе файла config.sample.php</div>';
         }
     }
 	
