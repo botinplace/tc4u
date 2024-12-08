@@ -1,7 +1,7 @@
 <?php
 namespace Core;
 
-use Core\Congig\Config;
+use Core\Config\Config;
 use Core\Request;
 
 if (file_exists($_SERVER['SCRIPT_FILENAME']) && pathinfo($_SERVER['SCRIPT_FILENAME'], PATHINFO_EXTENSION) !== 'php') {
