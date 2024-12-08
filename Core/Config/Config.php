@@ -13,7 +13,7 @@ class Config{
         }
     }
 	
-	private function defineDefaultConstants() {
+	private static function defineDefaultConstants() {
 			if (!defined('URI_FIXER')) {
 				define('URI_FIXER', '');
 			}
