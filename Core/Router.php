@@ -6,8 +6,10 @@ class Router {
 	private $pageData = []; // path,title,content,parents,
     private $cacheFile;
 	private $routesFile;
+	private $app;
 
-    public function __construct() {
+    public function __construct(Application $app ) {
+		$this->app = $app;
 		$this->routesFile = APP . 'routes.php';
 		$this->cacheFile = APP . 'cache/cachroutes.php';
 		
@@ -35,7 +37,6 @@ class Router {
 	}
 	
     public function cachRoutes() {
-		//file_put_contents($this->cacheFile, '<?php return ' . var_export($this->routes, true) . ';');
 		file_put_contents($this->cacheFile, '<?php return ' . $this->arrayToShortSyntax($this->routes) . ';');
 		
     }
@@ -97,10 +98,8 @@ private function loadRoutesFromCacheFile() {
     }
 
     private function normalizePath(string $path): string {
-        $path = trim($path, '/');
-		//$path = preg_replace('#[/]{2,}#', '/', $path);
-		return '/' . preg_replace('#[/]{2,}#', '/', $path);
-		
+        $path = trim($path, '/');		
+		return '/' . preg_replace('#[/]{2,}#', '/', $path);		
     }
 
     public function dispatch(string $path): void {

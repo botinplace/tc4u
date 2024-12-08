@@ -22,7 +22,7 @@ class Application {
         $this->routes = $this->loadFile(APP . 'routes.php');
 		
  		// Загрузка роутера
-		$this->router = new Router();
+		$this->router = new Router($this);
 		$this->dispatchCurrentRoute();
     }
 	
