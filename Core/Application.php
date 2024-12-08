@@ -18,8 +18,6 @@ class Application {
 		// Загрузка конфигурации
         $this->config = Config::loadConfig(APP . 'Config/config.php');
 		
-		define('FIXED_URL', ( !empty(URI_FIXER) ? URI_FIXER.(!empty(BASE_URL) ? '/' : '') : '').BASE_URL );
-		
 		// Загрузка маршрутов из файла
         $this->routes = $this->loadFile(APP . 'routes.php');
 		
