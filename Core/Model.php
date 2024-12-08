@@ -2,6 +2,7 @@
 namespace Core;
 
 class Model {
+	// Тут подключить из конфига...
 	function __construct(){
 		
 	}
