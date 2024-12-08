@@ -3,6 +3,7 @@ namespace Core;
 
 use Core\Config\Config;
 use Core\Request;
+use Core\Router;
 
 if (file_exists($_SERVER['SCRIPT_FILENAME']) && pathinfo($_SERVER['SCRIPT_FILENAME'], PATHINFO_EXTENSION) !== 'php') {
     return;
@@ -23,22 +24,25 @@ class Application {
         $this->routes = $this->loadFile(APP . 'routes.php');
 		
         // Определяем версию PHP и загружаем соответствующий маршрут
-        $this->initializeRouter();
+        //$this->initializeRouter();
+		
+		$this->router = new Router();
+		$this->dispatchCurrentRoute();
     }
 	
 	public function loadFile(string $filePath){
 		return file_exists($filePath) ? require $filePath : ([]);
 	}
 
-    private function initializeRouter() {        
+    //private function initializeRouter() {        
 		//Подключение роутера
-		$phpVersionClass = (PHP_VERSION_ID < 80000) ? '/Router7.php' : '/Router7.php';
-		require_once __DIR__ . $phpVersionClass;
-		$this->router = new Router();
+		//$phpVersionClass = (PHP_VERSION_ID < 80000) ? '/Router7.php' : '/Router7.php';
+		//require_once __DIR__ . $phpVersionClass;
+		//$this->router = new Router();
 
         // Получение текущего пути и метода
-        $this->dispatchCurrentRoute();
-    }
+        //$this->dispatchCurrentRoute();
+    //}
 
     private function dispatchCurrentRoute() {
         // Получение и очистка текущего пути
