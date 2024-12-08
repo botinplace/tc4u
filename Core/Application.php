@@ -21,9 +21,7 @@ class Application {
 		// Загрузка маршрутов из файла
         $this->routes = $this->loadFile(APP . 'routes.php');
 		
-        // Определяем версию PHP и загружаем соответствующий маршрут
-        //$this->initializeRouter();
-		
+ 		// Загрузка роутера
 		$this->router = new Router();
 		$this->dispatchCurrentRoute();
     }
@@ -31,16 +29,6 @@ class Application {
 	public function loadFile(string $filePath){
 		return file_exists($filePath) ? require $filePath : ([]);
 	}
-
-    //private function initializeRouter() {        
-		//Подключение роутера
-		//$phpVersionClass = (PHP_VERSION_ID < 80000) ? '/Router7.php' : '/Router7.php';
-		//require_once __DIR__ . $phpVersionClass;
-		//$this->router = new Router();
-
-        // Получение текущего пути и метода
-        //$this->dispatchCurrentRoute();
-    //}
 
     private function dispatchCurrentRoute() {
         // Получение и очистка текущего пути
