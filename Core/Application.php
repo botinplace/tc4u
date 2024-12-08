@@ -1,6 +1,7 @@
 <?php
 namespace Core;
 
+use Core\Congig\Config;
 use Core\Request;
 
 if (file_exists($_SERVER['SCRIPT_FILENAME']) && pathinfo($_SERVER['SCRIPT_FILENAME'], PATHINFO_EXTENSION) !== 'php') {
@@ -14,7 +15,9 @@ class Application {
     private $router;    
     public function __construct() {
 		// Загрузка конфигурации
-        $this->config = $this->loadFile(APP . '/Config.php');
+        $this->config = $Config::loadConfig(APP . 'Config/config.php');
+		
+		define('FIXED_URL', ( !empty(URI_FIXER) ? URI_FIXER.(!empty(BASE_URL) ? '/' : '') : '').BASE_URL );
 		
 		// Загрузка маршрутов из файла
         $this->routes = $this->loadFile(APP . 'routes.php');
@@ -24,7 +27,7 @@ class Application {
     }
 	
 	public function loadFile(string $filePath){
-		return file_exists($filePath) ? require $filePath : [];
+		return file_exists($filePath) ? require $filePath : ([]);
 	}
 
     private function initializeRouter() {        
