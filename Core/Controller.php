@@ -1,6 +1,11 @@
 <?php
 namespace Core;
 
+
+use Core\Response;
+use Core\Request;
+
+
 class Controller {
     public $baseTemplate = 'base';
     public $contentFile = '';
@@ -12,9 +17,11 @@ class Controller {
     public $get_main_block_only = false;
     public $pagedata;
     private $fast_array;
+	private $response;
 
-    public function __construct($pagedata) {		
+    public function __construct($pagedata) {	
         $this->pagedata = $pagedata;
+		$this->response = new Response();
         $this->xmlhttprequest = Request::isAjax();
         $this->baseTemplate = $pagedata['basetemplate']?:'base';
         $this->contentFile = $pagedata['contentFile'];
@@ -52,6 +59,8 @@ class Controller {
         return file_exists($filePath) ? file_get_contents($filePath) : '';
     }
 
+
+/*
     public final function render(array $extra_vars = []) {
         ob_get_clean();
 		
@@ -77,6 +86,35 @@ class Controller {
         }
         
         echo $this->replacePlaceholdersInOutput(ob_get_clean(), $this->fast_array);
+    }
+*/
+
+    public function render() {
+        ob_get_clean();
+
+        if (!$this->page_not_found) {
+            $this->setCacheHeaders();
+        }
+
+        $this->pagedata['content'] = $this->content;
+
+        if (!file_exists(TEMPLATES . '/' . $this->baseTemplate . '.php')) {
+            return $this->handleTemplateNotFound();
+        }
+
+        ob_start();
+        $this->handleAjaxRequest([]);
+        extract($this->pagedata);
+        $this->fast_array = $this->prepareExtraVars([]);
+
+        if ($this->get_main_block_only && $this->xmlhttprequest) {
+            return $this->renderMainBlock($this->fast_array);
+        } else {
+            include TEMPLATES . '/' . $this->baseTemplate . '.php';
+        }
+        
+        $this->response->setHtmlBody($this->replacePlaceholdersInOutput(ob_get_clean(), $this->fast_array));
+        $this->response->send(); // Отправляем ответ
     }
 
     private function replacePlaceholdersInOutput($output, array $fast_array): string {
