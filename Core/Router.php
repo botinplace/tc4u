@@ -144,6 +144,7 @@ private function loadRoutesFromCacheFile() {
 		}
 		
 		if ($route['needauth'] && !$this->isUserAuthenticated()) {
+			header('X-Auth-Required: true');
 			header('Location: auth');
 			exit();
 		}
