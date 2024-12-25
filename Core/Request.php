@@ -27,6 +27,11 @@ class Request {
         return getallheaders();
     }
 
+    public static function header($key, $default = null) {
+        $headers = self::headers();
+        return isset($headers[$key]) ? $headers[$key] : $default;
+    }
+
     // Получение метода запроса (GET, POST, PUT и др.)
     public static function method() {
         return $_SERVER['REQUEST_METHOD'];
