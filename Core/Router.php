@@ -37,6 +37,12 @@ class Router {
 	}
 	
     public function cachRoutes() {
+	$cacheDir = dirname($this->cacheFile);
+        if (!is_dir($cacheDir)) {
+            if (!mkdir($cacheDir, 0755, true)) {
+                throw new RuntimeException("Не удалось создать директорию: $cacheDir");
+            }
+        }
 		file_put_contents($this->cacheFile, '<?php return ' . $this->arrayToShortSyntax($this->routes) . ';');
 		
     }
