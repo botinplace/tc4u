@@ -182,11 +182,14 @@ private function loadRoutesFromCacheFile() {
     }
 
     private function resolveController(array $route): array {
+	/*    
         if (empty($route['controller'][0])) {
             $basename = ucfirst(basename($route['path']));
             $route['controller'][0] = "MainApp\Controllers\\{$basename}Controller";
         }
         return $route['controller'];		
+	*/
+	return $route['controller']? $route['controller']: ['',''] ;
     }
 
     private function callMiddleware(array $middleware): bool {
