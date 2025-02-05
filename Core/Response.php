@@ -19,9 +19,8 @@ class Response {
         $this->setHeader('Content-Type', 'application/json; charset=utf-8');
     }
 
-    public function setHtmlBody(string $html): void {
-        $html.= CORE_INFO_MESSAGE;
-        $this->body = $html;
+    public function setHtmlBody(string $html): void {        
+        $this->body =  CORE_INFO_MESSAGE.$html;
         $this->setHeader('Content-Type', 'text/html; charset=utf-8');
     }
 
