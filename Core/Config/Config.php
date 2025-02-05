@@ -7,7 +7,8 @@ class Config{
             require $configFilePath;
         } else {            
             self::defineDefaultConstants();
-			echo '<div style="background:red;color:white;padding:20px;position:relative;top:0;left:0;right:0;z-index:999999">Создайте файл "config.php" в папке Config на основе файла config.sample.php</div>';
+			//echo '<div style="background:red;color:white;padding:20px;position:relative;top:0;left:0;right:0;z-index:999999">Создайте файл "config.php" в папке Config на основе файла config.sample.php</div>';
+		define('CORE_INFO_MESSAGE','<div style="background:red;color:white;padding:20px;position:relative;top:0;left:0;right:0;z-index:999999">Создайте файл "config.php" в папке Config на основе файла config.sample.php</div>');
         }
 		define('FIXED_URL', ( !empty(URI_FIXER) ? URI_FIXER.(!empty(BASE_URL) ? '/' : '') : '').BASE_URL );
     }
