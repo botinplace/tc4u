@@ -20,7 +20,7 @@ class Response {
     }
 
     public function setHtmlBody(string $html): void {        
-        $this->body =  CORE_INFO_MESSAGE.$html;
+        $this->body =  (defined('CORE_INFO_MESSAGE') ? CORE_INFO_MESSAGE : '') .$html;
         $this->setHeader('Content-Type', 'text/html; charset=utf-8');
     }
 
