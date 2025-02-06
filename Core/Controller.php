@@ -89,7 +89,7 @@ class Controller {
     }
 */
 
-    public function render() {
+    public function render(array $extra_vars = []) {
         ob_get_clean();
 
         if (!$this->page_not_found) {
@@ -105,7 +105,7 @@ class Controller {
         ob_start();
         $this->handleAjaxRequest([]);
         extract($this->pagedata);
-        $this->fast_array = $this->prepareExtraVars([]);
+        $this->fast_array = $this->prepareExtraVars($extra_vars);
 
         if ($this->get_main_block_only && $this->xmlhttprequest) {
             return $this->renderMainBlock($this->fast_array);
