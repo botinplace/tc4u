@@ -26,9 +26,10 @@ class Controller {
         $this->baseTemplate = $pagedata['basetemplate']?:'base';
         $this->contentFile = $pagedata['contentFile'];
         $this->content = $this->loadContent($this->contentFile);        
-	$this->get_main_block_only = ( Request::header('X-Get-Main-Content-Only', false) || ( Request::get('GetMainContentOnly') && !empty( Request::get('GetMainContentOnly') ) && (bool)Request::get('GetMainContentOnly') ) ) ? true : false;
+		$this->get_main_block_only = ( Request::header('X-Get-Main-Content-Only', false) || ( Request::get('GetMainContentOnly') && !empty( Request::get('GetMainContentOnly') ) && (bool)Request::get('GetMainContentOnly') ) ) ? true : false;
     }
     
+	// тут лучше убрать в шаблон {{ includeCSS('filename' or ['filename1','filename2']) }}
 	function includeCSS($files) {
 		if (!is_array($files)) {
 			$files = array($files);
@@ -40,6 +41,8 @@ class Controller {
 			}
 		}
 	}
+	
+
     public function renderEmptyPage() {
         $this->content = $this->content ?: 'СТРАНИЦА В РАЗРАБОТКЕ';
         $this->render();
@@ -59,35 +62,141 @@ class Controller {
         return file_exists($filePath) ? file_get_contents($filePath) : '';
     }
 
+private function replacePlaceholdersInOutput($output, array $fast_array): string {
+    $output = $this->replacePlaceholders($output, $fast_array);
+    $output = $this->replaceForeachLoop($output, $fast_array);
+    return $output; // убираем неиспользуемый код
+}
+
+private function replacePlaceholders(string $output, array $fast_array): string {
+    return preg_replace_callback(
+        '/{{\s*([a-zA-Z0-9-_.]*)\s*[|]?\s*([a-zA-Z0-9]*)\s*}}/sm',
+        function($matches) use ($fast_array) {                
+            return $this->resolvePlaceholder($matches, $fast_array);
+        },
+        $output
+    );
+}
+
+private function replaceForeachLoop(string $output, array $fast_array): string {
+    return preg_replace_callback(
+        '/{%\s*foreach\s+([a-zA-Z0-9-_.]*)\s*%}(.*?){%\s*endforeach\s*%}/sm',
+        function($matches) use ($fast_array) {
+            return $this->processForeach($matches, $fast_array);
+        },
+        $output
+    );
+}
+
+private function resolvePlaceholder(array $matches, array $fast_array): string {
+    $filter = $matches[2] ?? false;
+    $key = '{{' . trim($matches[1]) . '}}';
+    $value = $fast_array[$key] ?? $key;
+
+    if (is_array($value)) {
+        return 'Array';
+    }
+    if (is_object($value)) {
+        return 'Object';
+    }
+
+    return ($filter === 'html') ? html_entity_decode($value) : htmlspecialchars(html_entity_decode($value), ENT_QUOTES, 'UTF-8');
+}
+
+private function processForeach(array $matches, array $fast_array): string {
+    $arrayKey = '{{' . trim($matches[1]) . '}}';
+    $content = $matches[2];
+    $output = '';
+
+    if (empty($fast_array[$arrayKey]) || !is_array($fast_array[$arrayKey])) {
+        return ''; // Можно выбрасывать исключение или вести лог
+    }
+
+    foreach ($fast_array[$arrayKey] as $key => $value) {
+        $loopContent = $this->replaceLoopPlaceholders($content, $value, $key);
+
+        // Обработка условий
+        $loopContent = $this->processIfConditions($loopContent, $key, $value, $fast_array);
+        $output .= $loopContent;
+    }
+
+    return $output;
+}
+
+private function replaceLoopPlaceholders(string $content, $value, $key): string {
+    $content = preg_replace_callback(
+        '/{{\s*value\s*}}/sm',
+        function($innerMatches) use ($value) {
+            return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+        },
+        $content
+    );
+
+    $content = preg_replace_callback(
+        '/{{\s*key\s*}}/sm',
+        function($innerMatches) use ($key) {
+            return htmlspecialchars($key, ENT_QUOTES, 'UTF-8');
+        },
+        $content
+    );
+
+    return $content;
+}
+
+private function processIfConditions(string $content, $key, $value, array $fast_array): string {
+    return preg_replace_callback(
+        '/{%\s*if\s+([^ ]+)\s*(==|!=)\s*([^ ]+)\s*%}(.*?){%\s*endif\s*%}/sm',
+        function($ifMatches) use ($key, $value, $fast_array) {
+            $leftValue = $this->getValueForComparison(trim($ifMatches[1]), $key, $value, $fast_array);
+            $operator = trim($ifMatches[2]);
+            $rightValue = $this->getValueForComparison(trim($ifMatches[3]), $key, $value, $fast_array);
+
+            if (($operator === '==' && $leftValue == $rightValue) || ($operator === '!=' && $leftValue != $rightValue)) {
+                return $ifMatches[4]; // Возвращаем содержимое, если условие истинно
+            }
+            return ''; // Возвращаем пустую строку, если условие ложно
+        },
+        $content
+    );
+}
+
+// Вспомогательная функция для получения значения по сравнению
+private function getValueForComparison($variable, $key, $value, $fast_array) {
+    if ($variable == 'key') {
+        return $key; // Возвращаем ключ
+    } elseif ($variable == 'value') {
+        return $value; // Возвращаем значение
+    } else {
+        return $fast_array['{{'.$variable.'}}'] ?? htmlspecialchars($variable); // Проверяем в fast_array
+    }
+}
+
+
+
 
 /*
-    public final function render(array $extra_vars = []) {
-        ob_get_clean();
-		
-        if (!$this->page_not_found) {
-			$this->setCacheHeaders();
-        }
-		
-		$this->pagedata['content'] = $this->content;
-        
-        if (!file_exists(TEMPLATES . '/' . $this->baseTemplate . '.php')) {
-            return $this->handleTemplateNotFound();
-        }
+private function replaceFor(array $matches): string {
+    $start = (int)$matches[1];
+    $end = (int)$matches[2];
+    $step = (int)$matches[3];
+    $content = $matches[4];
+    $output = '';
 
-        ob_start();
-        $this->handleAjaxRequest($extra_vars);
-        extract($this->pagedata);
-        $this->fast_array = $this->prepareExtraVars($extra_vars);
-
-        if ($this->get_main_block_only && $this->xmlhttprequest) {
-            return $this->renderMainBlock($this->fast_array);
-        } else {			
-            include TEMPLATES . '/' . $this->baseTemplate . '.php';
-        }
-        
-        echo $this->replacePlaceholdersInOutput(ob_get_clean(), $this->fast_array);
+    for ($i = $start; $i <= $end; $i += $step) {
+        $loopContent = $content;
+        $loopContent = preg_replace_callback(
+            '/{{\s*i\s*}}/sm',
+            function($innerMatches) use ($i) {
+                return htmlspecialchars($i, ENT_QUOTES, 'UTF-8'); 
+            },
+            $loopContent
+        );
+        $output .= $loopContent;
     }
+    return $output;
+}
 */
+
 
     public function render(array $extra_vars = []) {
         ob_get_clean();
@@ -114,17 +223,7 @@ class Controller {
         }
         
         $this->response->setHtmlBody($this->replacePlaceholdersInOutput(ob_get_clean(), $this->fast_array));
-        $this->response->send(); // Отправляем ответ
-    }
-
-    private function replacePlaceholdersInOutput($output, array $fast_array): string {
-        return preg_replace_callback(
-            '/{{\s*([a-zA-Z0-9-_.]*)\s*[|]?\s*([a-zA-Z0-9]*)\s*}}/sm',
-            function($matches) use ($fast_array) {				
-                return $this->replacePlaceholders($matches, $fast_array);
-            },
-            $output
-        );
+        $this->response->send();
     }
 
     public function handleNotFound(): void {
@@ -148,7 +247,7 @@ class Controller {
         foreach ($extra_vars as $key => $value) {
             $fast_array['{{' . $key . '}}'] = is_scalar($value) 
                 ? htmlspecialchars($value, ENT_QUOTES, 'UTF-8') 
-                : (is_array($value) ? 'Array' : (is_object($value) ? 'Object' : ''));
+                : (is_array($value) ? $value : (is_object($value) ? 'Object' : ''));
         }
         $fast_array['{{this_project_version}}'] = 'v.1.0.0';
 		$fast_array['{{SITE_URI}}'] = FIXED_URL;
@@ -157,18 +256,11 @@ class Controller {
 
     private function renderMainBlock(array $fast_array): void {
         header("X-Page-Title: " . base64_encode($this->pagedata['pagetitle'] ?? ''));
-        echo $this->content;
+        echo $this->replacePlaceholdersInOutput($this->content, $this->fast_array);
         echo '<input type="hidden" id="NewTitleTextByOnlyMain" value="' . ($this->pagedata['pagetitle'] ?? '') . '" />';
         if ($this->reload_page) {
             echo '<input type="hidden" id="ReloadPageByOnlyMain" value="1" />';
         }
     }
 
-    private function replacePlaceholders(array $matches, array $fast_array): string {
-        $filter = $matches[2] ?? false;
-        $key = '{{' . trim($matches[1]) . '}}';
-        $value = $fast_array[$key] ?? $key;
-
-        return ($filter === 'html' ? html_entity_decode($value) : htmlspecialchars(html_entity_decode($value), ENT_QUOTES, 'UTF-8'));
-    }
 }
