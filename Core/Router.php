@@ -1,213 +1,166 @@
 <?php
 namespace Core;
 
-class Router {
+use Core\Cache;
+
+class Router
+{
     private $routes = [];
-	private $pageData = []; // path,title,content,parents,
+    private $cache;
+    private $routesFile;
     private $cacheFile;
-	private $routesFile;
-	private $app;
+    private $pageData = [];
 
-    public function __construct(Application $app ) {
-		$this->app = $app;
-		$this->routesFile = APP . 'routes.php';
-		$this->cacheFile = APP . 'cache/cachroutes.php';
-		
-		$routes = file_exists($this->routesFile) ? require $this->routesFile : [];
-        $this->loadRoutesFromCache();
-		
-		$this->setRoutes($routes);
+    public function __construct()
+    {
+        $this->routesFile = APP . "routes.php";
+        $this->cacheFile = APP . "cache/cachroutes.php";
+        $this->cache = new Cache($this->cacheFile, $this->routesFile);
+
+        $this->loadRoutesFromCache(); // Загрузка маршрутов из кэша
+        $this->loadRoutesFromFile(); // В случае, если кэш не существует
     }
-	
-	public function setRoutes($routes){		
-		if (!empty($this->routes)) return;
-		foreach ($routes as $route) {
-			$this->addRoute(
-										$route['id'],
-										$route['method'],
-										$route['path'],
-										$route['controller'],
-										$route['basetemplate'] ?? null,
-										$route['contentfile'] ?? null,
-										$route['needauth'] ?? null,
-										$route['parentid'] ?? null
-									);
-		}
-		$this->cachRoutes();
-	}
-	
-    public function cachRoutes() {
-	$cacheDir = dirname($this->cacheFile);
-        if (!is_dir($cacheDir)) {
-            if (!mkdir($cacheDir, 0755, true)) {
-                throw new RuntimeException("Не удалось создать директорию: $cacheDir");
-            }
+
+    private function loadRoutesFromCache()
+    {
+        $routes = $this->cache->load();
+        if (!empty($routes)) {
+            $this->routes = $routes;
         }
-		file_put_contents($this->cacheFile, '<?php return ' . $this->arrayToShortSyntax($this->routes) . ';');
-		
-    }
-	
-	private function arrayToShortSyntax($array){
-        //return str_replace('array (', '[', str_replace(')', ']', var_export($array, true)));
-		$arrayString = var_export($array, true);
-		$arrayString = str_replace('array (', '[', $arrayString);
-		$arrayString = str_replace(')', ']', $arrayString);		
-		$arrayString = preg_replace('/\s*\d+\s*=>/', '', $arrayString);
-		$arrayString = preg_replace('/,\s*+/', ',', $arrayString);
-		$arrayString = preg_replace('/\[\s*,/', '[', $arrayString);
-		$arrayString = preg_replace('/,\s*\]/', ']', $arrayString);
-		return $arrayString;
     }
 
-private function loadRoutesFromCache() {
-    if (!file_exists($this->cacheFile) || !file_exists($this->routesFile)) {
-        return;
+    private function loadRoutesFromFile()
+    {
+        $routes = file_exists($this->routesFile)
+            ? require $this->routesFile
+            : [];
+        $this->setRoutes($routes);
     }
 
-    $cacheFileTime = filemtime($this->cacheFile);
-    $routesFileTime = filemtime($this->routesFile);
+    private function setRoutes(array $routes): void
+    {
+        if (!empty($this->routes)) {
+            return;
+        }
 
-    if ($cacheFileTime < $routesFileTime) {
-        $this->clearCache();
-    } else {
-        $this->loadRoutesFromCacheFile();
-    }
-}
-
-private function clearCache() {
-    if (file_exists($this->cacheFile)) {
-        unlink($this->cacheFile);
-    }
-}
-
-private function loadRoutesFromCacheFile() {
-    try {
-        $this->routes = require $this->cacheFile; 
-    } catch (\Throwable $e) {        
-        $this->routes = [];
-    }
-}
-
-    public function addRoute(int $id,string $method, string $path, array $controller, ?string $template,?string $contentfile,?bool $needauth): void {
-        $path = $this->normalizePath($path);
-        $this->routes[] = [
-			'id' => $id,
-            'path' => $path,
-            'method' => strtoupper($method),
-            'controller' => $controller,
-            'basetemplate' => $template,
-			'contentfile' => $contentfile,
-            'middlewares' => [],
-			'needauth' => $needauth,
-			'parentid'=>''
-        ];
+        foreach ($routes as $routeData) {
+            $route = new Route(
+                $routeData["id"],
+                $routeData["method"],
+                $routeData["path"],
+                $routeData["controller"],
+                $routeData["basetemplate"] ?? null,
+                $routeData["contentfile"] ?? null,
+                $routeData["needauth"] ?? false
+            );
+            $this->routes[] = $route;
+        }
+        $this->cache->save($this->routes);
     }
 
-    private function normalizePath(string $path): string {
-        $path = trim($path, '/');		
-		return '/' . preg_replace('#[/]{2,}#', '/', $path);		
-    }
-
-    public function dispatch(string $path): void {
-        $path = $this->pageData['path'] = $this->normalizePath($path);
-        $method = strtoupper($_SERVER['REQUEST_METHOD']);
+    public function dispatch(string $path): void
+    {
+        $normalizedPath = $this->normalizePath($path);
+        $method = strtoupper($_SERVER["REQUEST_METHOD"]);
 
         foreach ($this->routes as $route) {
-            if ($route['method'] !== $method) {
+            if ($route->method !== $method) {
                 continue;
             }
 
-            $pattern = preg_replace('/\{(\w+)\}/', '(?P<$1>[^/]+)', $route['path']);
-            if (!preg_match("#^{$pattern}$#", urldecode($path), $matches)) {
+            $pattern = preg_replace(
+                "/\{(\w+)\}/",
+                '(?P<$1>[^/]+)',
+                $route->path
+            );
+            if (
+                !preg_match(
+                    "#^{$pattern}$#",
+                    urldecode($normalizedPath),
+                    $matches
+                )
+            ) {
                 continue;
             }
 
-            array_shift($matches); 
-            $params = array_filter($matches); 
+            array_shift($matches); // Удаляем первый элемент, он соответствует полному пути
+            $params = array_filter($matches);
             $this->handleRoute($route, $params);
             return;
         }
 
-		$this->handleRoute([],[]);
-        //http_response_code(404);
-        //echo "Page not found";		
+        $this->handleNotFound(); // Обработка 404
     }
 
-    private function handleRoute(array $route, array $params): void {
-		
-		if(empty($route)){
-			$route=[
-				'id' => 0,
-				'path' => '404',
-				'method' => '',
-				'controller' => ["Core\\Controller",'handleNotFound'],
-				'basetemplate' => '',
-				'contentfile' => '404',
-				'middlewares' => [],
-				'needauth' => false,
-				'parentid'=>''
-			];
-		}
-		
-		if ($route['needauth'] && !$this->isUserAuthenticated()) {
-			header('X-Auth-Required: true');
-			header('Location: auth');
-			exit();
-		}
-		
+    private function handleRoute(Route $route, array $params): void
+    {
+        if ($route->needAuth && !$this->isUserAuthenticated()) {
+            header("Location: auth");
+            exit();
+        }
+
         [$class, $function] = $this->resolveController($route);
-		
-		if (!class_exists($class) || !method_exists($class, $function)) {
-			[$class, $function] = ["Core\\Controller",'renderEmptyPage'];				
-        }
-		
-		if(isset($route['middlewares'])){
-			foreach ($route['middlewares'] as $middleware) {
-				if (!$this->callMiddleware($middleware)) {
-					return;
-				}
-			}
-		}
-		
-		$basename = ucfirst(basename($route['path']));
-		$this->pageData['basetemplate'] = isset($route['basetemplate']) ? $route['basetemplate'] : 'base';
-		$this->pageData['contentFile'] = isset($route['contentfile']) ? $route['contentfile'] : (!empty($basename) ? $basename : 'Index') ;
-		$this->pageData['needauth'] = isset($route['needauth']) ? $route['needauth'] : false;
 
-		ob_start();
-        $controllerInstance = new $class($this->pageData);
-        $controllerInstance->{$function}(...array_values($params));	
-		//ob_get_clean();		
-		return;
+        if (!class_exists($class) || !method_exists($class, $function)) {
+            [$class, $function] = ["Core\Controller", "renderEmptyPage"];
+        }
+
+        $basename = ucfirst(basename($route->path));
+        $this->pageData["basetemplate"] = isset($route->basetemplate)
+            ? $route->basetemplate
+            : "base";
+        $this->pageData["contentFile"] = isset($route->contentfile)
+            ? $route->contentfile
+            : (!empty($basename)
+                ? $basename
+                : "Index");
+        $this->pageData["needauth"] = isset($route->needAuth)
+            ? $route->needAuth
+            : false;
+
+        $controllerInstance = new $class($this->pageData); // Сюда pagedata!!!
+        $controllerInstance->{$function}(...array_values($params));
+
+        return;
     }
 
-    private function resolveController(array $route): array {
-	/*    
-        if (empty($route['controller'][0])) {
-            $basename = ucfirst(basename($route['path']));
-            $route['controller'][0] = "MainApp\Controllers\\{$basename}Controller";
-        }
-        return $route['controller'];		
-	*/
-	return $route['controller']? $route['controller']: ['',''] ;
+    private function handleNotFound(): void
+    {
+        $route = new Route(0, "GET", "404", [
+            "Core\Controller",
+            "handleNotFound",
+        ]);
+        $this->handleRoute($route, []);
     }
 
-    private function callMiddleware(array $middleware): bool {
-        if (count($middleware) !== 2) {
-            return false;
-        }
-
-        [$class, $method] = $middleware;
-        if (!class_exists($class) || !method_exists($class, $method)) {
-            return false;
-        }
-
-        $middlewareInstance = new $class();
-        return $middlewareInstance->{$method}();
+    private function resolveController(Route $route): array
+    {
+        return $route->controller ?: ["", ""];
     }
-	
-	
-	private function isUserAuthenticated(): bool {
-		return isset($_SESSION['user_id']);
-	}
+
+    private function normalizePath(string $path): string
+    {
+        return "/" . trim(preg_replace("#[/]{2,}#", "/", $path), "/");
+    }
+
+    private function isUserAuthenticated(): bool
+    {
+        return isset($_SESSION["user_id"]);
+    }
+
+    private function toArray(): array
+    {
+        return array_map(function ($route) {
+            return [
+                "id" => $route->id,
+                "method" => $route->method,
+                "path" => $route->path,
+                "controller" => $route->controller,
+                "basetemplate" => $route->template,
+                "contentfile" => $route->contentFile,
+                "needauth" => $route->needAuth,
+                "middlewares" => $route->middlewares,
+            ];
+        }, $this->routes);
+    }
 }
