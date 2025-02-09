@@ -24,7 +24,7 @@ class Controller {
 		$this->response = new Response();
         $this->xmlhttprequest = Request::isAjax();
         $this->baseTemplate = $pagedata['basetemplate']?:'base';
-        $this->contentFile = $pagedata['contentFile'];
+        $this->contentFile = $pagedata['contentFile']?:'';
         $this->content = $this->loadContent($this->contentFile);        
 		$this->get_main_block_only = ( Request::header('X-Get-Main-Content-Only', false) || ( Request::get('GetMainContentOnly') && !empty( Request::get('GetMainContentOnly') ) && (bool)Request::get('GetMainContentOnly') ) ) ? true : false;
     }
