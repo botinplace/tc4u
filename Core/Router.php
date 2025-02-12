@@ -103,7 +103,7 @@ class Router
                 $this->response->setJson( ['error' => 'Unauthorized', 'redirect' => '/auth'] );
             } else {
                 // Перенаправление для обычного запроса
-                $this->response->setHeader();
+                $this->response->setHeader('location','/auth');
             }
             $this->send();
         }
