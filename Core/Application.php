@@ -45,22 +45,13 @@ class Application
         $path = explode("?", $path, 2)[0];
 
         // Удаление лишнего (например /admin/)
-        $path =
-            URI_FIXER !== ""
-                ? preg_replace(
-                    "/^" . preg_quote(URI_FIXER, "/") . '(\/|$)/',
-                    "/",
-                    $path
-                )
-                : $path;
-        $path =
-            BASE_URL !== ""
-                ? preg_replace(
-                    "/^\/" . preg_quote(BASE_URL, "/") . '(\/|$)/',
-                    "/",
-                    $path
-                )
-                : $path;
+        if( URI_FIXER !== "" ){
+            $path = preg_replace( "/^" . preg_quote(URI_FIXER, "/") . '(\/|$)/', "/", $path );
+        }
+                
+        if( BASE_URL !== "" ){
+            $path = preg_replace( "/^\/" . preg_quote(BASE_URL, "/") . '(\/|$)/', "/", $path )
+        }
 
         return $path ?: "/";
     }
