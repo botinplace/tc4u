@@ -94,9 +94,18 @@ class Router
 
     private function handleRoute(Route $route, array $params): void
     {
+        // Если роут требует авторизации и пользователь не авторизован
         if ($route->needAuth && !$this->isUserAuthenticated()) {
-            header("Location: auth");
-            exit();
+            if ($this->isAjaxRequest()) {
+                // Возврат JSON ответа для AJAX-запроса
+                header('Content-Type: application/json');
+                echo json_encode(['error' => 'Unauthorized', 'redirect' => '/auth']);
+                exit;
+            } else {
+                // Перенаправление для обычного запроса
+                header("Location: /auth");
+                exit();
+            }
         }
 
         [$class, $function] = $this->resolveController($route);
