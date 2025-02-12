@@ -50,7 +50,7 @@ class Application
         }
                 
         if( BASE_URL !== "" ){
-            $path = preg_replace( "/^\/" . preg_quote(BASE_URL, "/") . '(\/|$)/', "/", $path )
+            $path = preg_replace( "/^\/" . preg_quote(BASE_URL, "/") . '(\/|$)/', "/", $path );
         }
 
         return $path ?: "/";
