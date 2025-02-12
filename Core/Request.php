@@ -22,6 +22,12 @@ class Request {
         return $_POST;
     }
 
+    // Получение JSON данных из тела запроса
+    public static function json() {
+        $data = json_decode(file_get_contents('php://input'), true);
+        return json_last_error() === JSON_ERROR_NONE ? $data : null;
+    }
+	
     // Получение заголовков запроса
     public static function headers() {
         return getallheaders();
