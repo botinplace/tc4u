@@ -96,13 +96,15 @@ class Router
     {
         // Если роут требует авторизации и пользователь не авторизован
         if ($route->needAuth && !$this->isUserAuthenticated()) {
-            if ($this->isAjaxRequest()) {
+            if ( Request::isAjax() ) {
                 // Возврат JSON ответа для AJAX-запроса
+                // Response->json
                 header('Content-Type: application/json');
                 echo json_encode(['error' => 'Unauthorized', 'redirect' => '/auth']);
                 exit;
             } else {
                 // Перенаправление для обычного запроса
+                // Response->header
                 header("Location: /auth");
                 exit();
             }
