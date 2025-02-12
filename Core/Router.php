@@ -119,11 +119,17 @@ class Router
         $this->pageData["basetemplate"] = isset($route->basetemplate)
             ? $route->basetemplate
             : "base";
+        
         $this->pageData["contentFile"] = isset($route->contentfile)
             ? $route->contentfile
             : (!empty($basename)
                 ? $basename
                 : "Index");
+
+        $this->pageData["routename"] = isset($route->name)
+            ? $route->name
+            : '';
+        
         $this->pageData["needauth"] = isset($route->needAuth)
             ? $route->needAuth
             : false;
