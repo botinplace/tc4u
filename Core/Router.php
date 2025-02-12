@@ -55,8 +55,8 @@ class Router
                     // добавить $data["onlyforguest"] ?? false,
                     $key
                 );
-             }
-            $this->routes[] = $route;
+                 $this->routes[] = $route;
+             }            
         }
         $this->cache->save($this->routes);
     }
