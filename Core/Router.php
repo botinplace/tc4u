@@ -2,6 +2,7 @@
 namespace Core;
 
 use Core\Cache;
+use Core\Response;
 
 class Router
 {
@@ -10,13 +11,14 @@ class Router
     private $routesFile;
     private $cacheFile;
     private $pageData = [];
+    private $response;
 
     public function __construct()
     {
         $this->routesFile = APP . "routes.php";
         $this->cacheFile = APP . "cache/cachroutes.php";
         $this->cache = new Cache($this->cacheFile, $this->routesFile);
-
+        $this->response = new Response();
         $this->loadRoutesFromCache(); // Загрузка маршрутов из кэша
         $this->loadRoutesFromFile(); // В случае, если кэш не существует
     }
@@ -98,16 +100,12 @@ class Router
         if ($route->needAuth && !$this->isUserAuthenticated()) {
             if ( Request::isAjax() ) {
                 // Возврат JSON ответа для AJAX-запроса
-                // Response->json
-                header('Content-Type: application/json');
-                echo json_encode(['error' => 'Unauthorized', 'redirect' => '/auth']);
-                exit;
+                $this->response->setJson( ['error' => 'Unauthorized', 'redirect' => '/auth'] );
             } else {
                 // Перенаправление для обычного запроса
-                // Response->header
-                header("Location: /auth");
-                exit();
+                $this->response->setHeader();
             }
+            $this->send();
         }
 
         [$class, $function] = $this->resolveController($route);
