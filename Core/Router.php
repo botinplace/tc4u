@@ -64,7 +64,7 @@ class Router
     public function dispatch(string $path): void
     {
         $normalizedPath = $this->normalizePath($path);
-        $method = strtoupper($_SERVER["REQUEST_METHOD"]);
+        $method = strtoupper( Request::method() );
 
         foreach ($this->routes as $route) {
             if ($route->method !== $method) {
