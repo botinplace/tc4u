@@ -1,28 +1,24 @@
 <?php
 namespace Core;
 
-class Route {
-    public $id;
+class Route {    
     public $method;
     public $path;
     public $controller;
-    public $template;
-    public $contentFile;
     public $needAuth;
     public $middlewares;
+    public $name;
 
-    public function __construct($id, $method, $path, $controller, $template = null, $contentFile = null, $needAuth = false) {
-       $this->id = $id;
+    public function __construct( $method, $path, $controller, $needAuth = false,$name='') {
        $this->method = strtoupper($method);
        $this->path = $this->normalizePath($path);
        $this->controller = $controller;
-       $this->template = $template;
-       $this->contentFile = $contentFile;
        $this->needAuth = $needAuth;
        $this->middlewares = [];
+       $this->name = $name;
     }
 	public static function __set_state(array $state) {
-			$obj = new self( $state['id'], $state['method'], $state['path'], $state['controller'], $state['template'], $state['contentFile'], $state['needAuth'] );			
+			$obj = new self( $state['method'], $state['path'], $state['controller'], $state['needAuth'],$state['name'] );			
 			return $obj;
 	}
 	
