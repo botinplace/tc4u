@@ -49,9 +49,10 @@ class Router
              foreach ($routeData['methods'] as $method => $data) {
                 $route = new Route(                    
                     $method,
-                    $data["path"],
+                    $routeData["path"],
                     $data["controller"],
                     $data["needauth"] ?? false,
+                    // добавить $data["onlyforguest"] ?? false,
                     $key
                 );
              }
