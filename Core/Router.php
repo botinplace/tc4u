@@ -45,16 +45,16 @@ class Router
             return;
         }
 
-        foreach ($routes as $routeData) {
-            $route = new Route(
-                $routeData["id"],
-                $routeData["method"],
-                $routeData["path"],
-                $routeData["controller"],
-                $routeData["basetemplate"] ?? null,
-                $routeData["contentfile"] ?? null,
-                $routeData["needauth"] ?? false
-            );
+        foreach ($routes as $key=>$routeData) {
+             foreach ($routeData['methods'] as $method => $data) {
+                $route = new Route(                    
+                    $method,
+                    $data["path"],
+                    $data["controller"],
+                    $data["needauth"] ?? false,
+                    $key
+                );
+             }
             $this->routes[] = $route;
         }
         $this->cache->save($this->routes);
@@ -135,10 +135,7 @@ class Router
 
     private function handleNotFound(): void
     {
-        $route = new Route(0, "GET", "404", [
-            "Core\Controller",
-            "handleNotFound",
-        ]);
+        $route = new Route("GET", "404", [ "Core\Controller","handleNotFound"]);
         $this->handleRoute($route, []);
     }
 
@@ -160,15 +157,11 @@ class Router
     private function toArray(): array
     {
         return array_map(function ($route) {
-            return [
-                "id" => $route->id,
+            return [                
                 "method" => $route->method,
                 "path" => $route->path,
-                "controller" => $route->controller,
-                "basetemplate" => $route->template,
-                "contentfile" => $route->contentFile,
-                "needauth" => $route->needAuth,
-                "middlewares" => $route->middlewares,
+                "controller" => $route->controller,                
+                "needauth" => $route->needAuth,                
             ];
         }, $this->routes);
     }
