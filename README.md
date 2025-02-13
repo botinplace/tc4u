@@ -55,20 +55,6 @@ return [
             ],
         ],
         'needauth' => true,
-        'onlyforguest' => false,
-    ],
-    'admin' => [
-        'path' => '/admin',
-        'methods' => [
-            'GET' => [
-                'controller' => [MainApp\Controllers\AdminController::class, 'dashboard'],
-            ],
-            'POST' => [
-                'controller' => [MainApp\Controllers\AdminController::class, 'manage'],
-            ],
-        ],
-        'needauth' => true,
-        'onlyforguest' => false,
     ],
     'login' => [
         'path' => '/login',
@@ -80,20 +66,18 @@ return [
             ],
             'POST' => [
                 'controller' => [MainApp\Controllers\AuthController::class, 'login'],
-            'needauth' => true,
-            'onlyforguest' => false,
+            'needauth' => false,
+            'onlyforguest' => true,
             ],
         ],
     ],
     'logout' => [
         'path' => '/logout',
         'methods' => [
-            'POST' => [
+            'GET' => [
                 'controller' => [MainApp\Controllers\AuthController::class, 'logout'],
             ],
         ],
-        'needauth' => true,
-        'onlyforguest' => false,
     ],
     ...
 ];
