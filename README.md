@@ -15,13 +15,9 @@ return [
         'methods' => [
             'GET' => [
                 'controller' => [MainApp\Controllers\IndexController::class, 'index'],
-                'needauth' => false,
-                'onlyforguest' => true,
             ],
             'POST' => [
                 'controller' => [MainApp\Controllers\IndexController::class, 'postData'],
-                'needauth' => true,
-                'onlyforguest' => false,
             ],
         ],
     ],
