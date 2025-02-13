@@ -12,6 +12,7 @@ class Router
     private $cacheFile;
     private $pageData = [];
     private $response;
+    private $allowedMethods = ['GET,POST,PUT,DELETE,OPTIONS,HEAD'];
 
     public function __construct()
     {
@@ -21,6 +22,9 @@ class Router
         $this->response = new Response();
         $this->loadRoutesFromCache(); // Загрузка маршрутов из кэша
         $this->loadRoutesFromFile(); // В случае, если кэш не существует
+        if( !empty(ALLOWED_METHODS) ){
+            $this->allowedMethods = ? array_map('trim', explode(',', ALLOWED_METHODS));
+        }
     }
 
     private function loadRoutesFromCache()
@@ -63,9 +67,17 @@ class Router
 
     public function dispatch(string $path): void
     {
-        $normalizedPath = $this->normalizePath($path);
-        $method = strtoupper( Request::method() );
 
+        $method = strtoupper( Request::method() );
+        
+         if (!in_array($method, $this->allowedMethods)) {                
+                $this->response->setHeader('HTTP/1.1 405 Method Not Allowed');
+                $this->send();
+                return;
+            }
+
+        $normalizedPath = $this->normalizePath($path);
+        
         foreach ($this->routes as $route) {
             if ($route->method !== $method) {
                 continue;
