@@ -14,6 +14,11 @@ class Config{
 		
         }
 		define('FIXED_URL', ( !empty(URI_FIXER) ? URI_FIXER.(!empty(BASE_URL) ? '/' : '') : '').BASE_URL );
+		
+		if (!defined('ALLOWED_METHODS')) {
+			define('ALLOWED_METHODS',['GET','POST','PUT','DELETE','OPTIONS','HEAD'] );
+		}
+		
     }
 	
 	private static function defineDefaultConstants() {
