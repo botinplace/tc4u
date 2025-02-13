@@ -20,13 +20,17 @@ class Router
         $this->cacheFile = APP . "cache/cachroutes.php";
         $this->cache = new Cache($this->cacheFile, $this->routesFile);
         $this->response = new Response();
+        $this->setAllowedMethods();
         $this->loadRoutesFromCache(); // Загрузка маршрутов из кэша
         $this->loadRoutesFromFile(); // В случае, если кэш не существует
-        if( !empty(ALLOWED_METHODS) ){
-            $this->allowedMethods = ? array_map('trim', explode(',', ALLOWED_METHODS));
-        }
     }
 
+    private function setAllowedMethods()
+    {
+        if (!empty(ALLOWED_METHODS)) {
+            $this->allowedMethods = array_map('trim', explode(',', ALLOWED_METHODS));
+        }
+    }
     private function loadRoutesFromCache()
     {
         $routes = $this->cache->load();
@@ -59,7 +63,9 @@ class Router
                     // добавить $data["onlyforguest"] ?? false,
                     $key
                 );
-                 $this->routes[] = $route;
+                  //$this->routes[] = $route;
+                  //$this->routes[$method][$routeData["path"]] = $route;
+                 $this->routes[$method][] = $route;
              }            
         }
         $this->cache->save($this->routes);
@@ -67,7 +73,6 @@ class Router
 
     public function dispatch(string $path): void
     {
-
         $method = strtoupper( Request::method() );
         
          if (!in_array($method, $this->allowedMethods)) {                
@@ -78,7 +83,7 @@ class Router
 
         $normalizedPath = $this->normalizePath($path);
         
-        foreach ($this->routes as $route) {
+        foreach ($this->routes[$method] as $route) {
             if ($route->method !== $method) {
                 continue;
             }
@@ -165,6 +170,8 @@ class Router
 
     private function normalizePath(string $path): string
     {
+         //$normalized = "/" . trim(preg_replace("#[/]{2,}#", "/", $path), "/");
+         //return $normalized === '' ? '/' : $normalized;
         return "/" . trim(preg_replace("#[/]{2,}#", "/", $path), "/");
     }
 
