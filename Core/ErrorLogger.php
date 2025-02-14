@@ -16,8 +16,8 @@ class ErrorLogger {
         $this->log("ERROR: [$errno] $errstr in $errfile on line $errline");
     }
 
-    public function handleException($exception) {
-        $this->log( "EXCEPTION: " . $exception->getMessage() .' | '. $exception->getFile() . ' | '.  $exception->getLine() );
+    public function handleException($exception) {        
+        $this->log("EXCEPTION: {$exception->getMessage()} On File: {$exception->getFile()} On Line: {$exception->getLine()}");
     }
 
     private function log($message) {
