@@ -133,6 +133,7 @@ class Router
         }
 
         $basename = ucfirst(basename($route->path));
+        /*
         $this->pageData["basetemplate"] = isset($route->basetemplate)
             ? $route->basetemplate
             : "base";
@@ -142,7 +143,7 @@ class Router
             : (!empty($basename)
                 ? $basename
                 : "Index");
-
+        */
         $this->pageData["routename"] = isset($route->name)
             ? $route->name
             : '';
