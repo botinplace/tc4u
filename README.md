@@ -4,18 +4,19 @@ The tc4u PHP framework
 composer install --ignore-platform-reqs
 
 ## Базовая структура каталогов приложения
--MainApp/
- --   Config/
-  ---      config.php
-     ---   pagedata.php
-       --- routes.php
-    --Content/
-    --Controllers/
-    --Templates/
-     ---   base.php
-    --public/        
-      ---  .htaccess
-       --- index.php
+```
+MainApp/
+    Config/
+        config.php
+        pagedata.php
+        routes.php
+    Content/
+    Controllers/
+    Templates/
+        base.php
+    public/        
+        .htaccess
+        index.php
         
 
 ## routes.php format
