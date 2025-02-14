@@ -79,7 +79,7 @@ private function loadPageData($pagename = ''): array
     $filePath = APP . "Config/pagedata.php";
 
     if (!file_exists($filePath)) {
-        error_log("Ошибка: файл не найден - $filePath");
+		trigger_error("Ошибка: файл не найден - $filePath", E_USER_WARNING);
         return [];
     }
 
@@ -87,15 +87,14 @@ private function loadPageData($pagename = ''): array
         $pagedata = include $filePath;
 
         if (!is_array($pagedata)) {
-            error_log("Данные в файле $filePath должны быть массивом.");
+			trigger_error("Данные в файле $filePath должны быть массивом.");
             return [];
         }
         
-        // Возвращаем данные для указанной страницы, или пустой массив
         return $pagedata[$pagename] ?? [];
         
     } catch (\Throwable $e) {
-        error_log("Ошибка при загрузке файла $filePath: " . $e->getMessage());
+		trigger_error("Ошибка при загрузке файла $filePath: " . $e->getMessage(), E_USER_WARNING);
         return [];
     }
 }
