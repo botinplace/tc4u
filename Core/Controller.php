@@ -72,6 +72,12 @@ class Controller
         }
     }
 
+    private function loadPageData(): array
+    {
+        $filePath = APP . "Config/pagedata.php";
+        return file_exists($filePath) ? file_get_contents($filePath) : [];
+    }
+    
     private function loadContent(string $contentFile): string
     {
         $filePath = APP . "Content/" . ucfirst($contentFile) . "Content.html";
