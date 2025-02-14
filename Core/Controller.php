@@ -24,8 +24,8 @@ class Controller
         $this->pagedata = array_merge($pagedata,$this->pagedata);
         $this->response = new Response();
         $this->xmlhttprequest = Request::isAjax();
-        $this->baseTemplate = $pagedata["basetemplate"] ?: "base";
-        $this->contentFile = $pagedata["contentFile"] ?: "";
+        $this->baseTemplate = $this->pagedata["basetemplate"] ?: "base";
+        $this->contentFile = $this->pagedata["contentFile"] ?: "";
         $this->content = $this->loadContent($this->contentFile);
         $this->get_main_block_only =
             Request::header("X-Get-Main-Content-Only", false) ||
