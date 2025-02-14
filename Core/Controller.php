@@ -77,8 +77,8 @@ class Controller
 private function loadPageData($pagename = ''): array
 {
     $filePath = APP . "Config/pagedata.php";
-    
-    if (!file_exists($filePath)) {        
+
+    if (!file_exists($filePath)) {
         error_log("Ошибка: файл не найден - $filePath");
         return [];
     }
@@ -87,13 +87,15 @@ private function loadPageData($pagename = ''): array
         $pagedata = include $filePath;
 
         if (!is_array($pagedata)) {
-            throw new Exception("Данные в файле $filePath должны быть массивом.");
+            error_log("Данные в файле $filePath должны быть массивом.");
+            return [];
         }
-
+        
+        // Возвращаем данные для указанной страницы, или пустой массив
         return $pagedata[$pagename] ?? [];
         
-    } catch (Exception $e) {
-        error_log("Ошибка при загрузке данных страницы: " . $e->getMessage());
+    } catch (\Throwable $e) {
+        error_log("Ошибка при загрузке файла $filePath: " . $e->getMessage());
         return [];
     }
 }
