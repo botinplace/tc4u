@@ -74,17 +74,30 @@ class Controller
         }
     }
 
-    private function loadPageData($pagename = ''): array
-    {
-        $filePath = APP . "Config/pagedata.php";
-        if (!file_exists($filePath)) {
-            return []; // Ошибка: файл не найден
-        }
+private function loadPageData($pagename = ''): array
+{
+    $filePath = APP . "Config/pagedata.php";
     
-        $pagedata = require $filePath;
-
-        return $pagedata[$pagename] ?? []; // Возвращаем данные для конкретной страницы или пустой массив
+    if (!file_exists($filePath)) {        
+        error_log("Ошибка: файл не найден - $filePath");
+        return [];
     }
+
+    try {
+        $pagedata = include $filePath;
+
+        if (!is_array($pagedata)) {
+            throw new Exception("Данные в файле $filePath должны быть массивом.");
+        }
+
+        return $pagedata[$pagename] ?? [];
+        
+    } catch (Exception $e) {
+        error_log("Ошибка при загрузке данных страницы: " . $e->getMessage());
+        return [];
+    }
+}
+
     
     private function loadContent(string $contentFile): string
     {
