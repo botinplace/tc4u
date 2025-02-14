@@ -20,7 +20,8 @@ class Controller
 
     public function __construct($pagedata)
     {
-        $this->pagedata = $pagedata;
+        $this->pagedata = $this->loadPageData( isset($pagedata['name'])?:'' );
+        $this->pagedata = array_merge($pagedata,$this->pagedata);
         $this->response = new Response();
         $this->xmlhttprequest = Request::isAjax();
         $this->baseTemplate = $pagedata["basetemplate"] ?: "base";
@@ -72,10 +73,16 @@ class Controller
         }
     }
 
-    private function loadPageData(): array
+    private function loadPageData($pagename = ''): array
     {
         $filePath = APP . "Config/pagedata.php";
-        return file_exists($filePath) ? file_get_contents($filePath) : [];
+        if (!file_exists($filePath)) {
+            return []; // Ошибка: файл не найден
+        }
+    
+        $pagedata = require $filePath;
+
+        return $pagedata[$pagename] ?? []; // Возвращаем данные для конкретной страницы или пустой массив
     }
     
     private function loadContent(string $contentFile): string
