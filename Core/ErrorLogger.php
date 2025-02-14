@@ -17,7 +17,7 @@ class ErrorLogger {
     }
 
     public function handleException($exception) {
-        $this->log("EXCEPTION: " . $exception->getMessage());
+        $this->log( "EXCEPTION: " . $exception->getMessage() .' | '. $exception->getFile() . ' | '.  $exception->getLine() );
     }
 
     private function log($message) {
