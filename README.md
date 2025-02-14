@@ -7,16 +7,16 @@ composer install --ignore-platform-reqs
 
 - **MainApp/**
     - **Config/**
-       -- **config.php**
-       -- **pagedata.php**
-       -- **routes.php**
+       - **config.php**
+       - **pagedata.php**
+       - **routes.php**
     - **Content/**
     - **Controllers/**
     - **Templates/**
-       -- **base.php**
+       - **base.php**
     - **public/**        
-       -- **.htaccess**
-       -- **index.php**
+       - **.htaccess**
+       - **index.php**
         
 
 ## routes.php format
