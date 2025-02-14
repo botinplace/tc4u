@@ -20,7 +20,8 @@ class Controller
 
     public function __construct($pagedata)
     {
-        $this->pagedata = $this->loadPageData( isset($pagedata['name'])?:'' );
+        $routename = isset($pagedata['routename'])?$pagedata['routename']:'';
+        $this->pagedata = $this->loadPageData( $routename );
         $this->pagedata = array_merge($pagedata,$this->pagedata);
         $this->response = new Response();
         $this->xmlhttprequest = Request::isAjax();
