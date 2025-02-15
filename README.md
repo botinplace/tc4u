@@ -14,6 +14,7 @@ composer install --ignore-platform-reqs
     - **Controllers/**
     - **Templates/**
        - **base.php**
+    - **Logs/** 
     - **public/**        
        - **.htaccess**
        - **index.php**
