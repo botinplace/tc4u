@@ -376,7 +376,7 @@ private function replaceFor(array $matches): string {
             "X-Page-Title: " . base64_encode($this->pagedata["pagetitle"] ?? "")
         );
 	*/
-	$newheader = base64_encode($this->pagedata["pagetitle"] ?? "";
+	$newheader = base64_encode($this->pagedata["pagetitle"] ?? "");
 	$this->response->setHeader('X-Page-Title:',$newheader);
 	    
         echo $this->replacePlaceholdersInOutput(
