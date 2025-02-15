@@ -82,8 +82,9 @@ class Router
             }
 
         $normalizedPath = $this->normalizePath($path);
-        
-        foreach ($this->routes[$method] as $route) {
+
+        $routes = ( isset( $this->routes[$method] ) & is_array($this->routes[$method]) ) ? $this->routes[$method] : [];
+        foreach ( $routes as $route) {
             if ($route->method !== $method) {
                 continue;
             }
