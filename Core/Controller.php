@@ -68,9 +68,14 @@ class Controller
     private function handleAjaxRequest($extra_vars)
     {
         if ($this->xmlhttprequest && !$this->get_main_block_only) {
+	/*
             header("Content-Type: application/json; charset=utf-8");
             echo json_encode($extra_vars["json_response"] ?? []);
             exit();
+	*/
+		$data = $extra_vars["json_response"] ?? [];
+		$this->response->setJsonBody( $data );
+		$this->response->send();
         }
     }
 
@@ -112,7 +117,7 @@ private function loadPageData($pagename = ''): array
     ): string {
         $output = $this->replacePlaceholders($output, $fast_array);
         $output = $this->replaceForeachLoop($output, $fast_array);
-        return $output; // убираем неиспользуемый код
+        return $output;
     }
 
     private function replacePlaceholders(
@@ -325,14 +330,17 @@ private function replaceFor(array $matches): string {
 
     public function handleNotFound(): void
     {
+	// заменить на $this->response->setHeader !!!
         header("Content-type: text/html; charset=utf-8");
         header("HTTP/1.0 404 Not Found");
+	$this->content = $this->loadContent('404');
         $this->page_not_found = true;
         $this->render();
     }
 
     private function setCacheHeaders(): void
     {
+	// заменить на $this->response->setHeader !! и проверить возможно это в конфиг вынести
         header("Cache-control: public");
         header(
             "Expires: " . gmdate("D, d M Y H:i:s", time() + 60 * 60) . " GMT"
@@ -363,9 +371,14 @@ private function replaceFor(array $matches): string {
 
     private function renderMainBlock(array $fast_array): void
     {
+	/*
         header(
             "X-Page-Title: " . base64_encode($this->pagedata["pagetitle"] ?? "")
         );
+	*/
+	$newheader = base64_encode($this->pagedata["pagetitle"] ?? "";
+	$this->response->setHeader('X-Page-Title:',$newheader);
+	    
         echo $this->replacePlaceholdersInOutput(
             $this->content,
             $this->fast_array
