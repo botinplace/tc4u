@@ -9,6 +9,7 @@ class FileManager {
         if (!file_exists($filePath)) {
             throw new RuntimeException("Файл не найден: {$filePath}");
         }
+        // Ещё проверить на ошибки самого файла (если например php,json и т.д)
         return file_get_contents($filePath);
     }
 
