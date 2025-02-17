@@ -19,7 +19,7 @@ composer install --ignore-platform-reqs
        - **.htaccess**
        - **index.php**
 
-
+```plaintext
 /Core
 │
 ├── /Ad
@@ -47,7 +47,9 @@ composer install --ignore-platform-reqs
 ├── Response.php            // Класс для формирования HTTP-ответов
 ├── Route.php               // Класс, представляющий маршрут
 └── Router.php              // Класс маршрутизатора, который управляет маршрутизацией
- 
+ ```
+
+
 ## config.php format
 ```php
 <?php
