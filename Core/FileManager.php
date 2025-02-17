@@ -4,7 +4,7 @@ namespace Core;
 use RuntimeException;
 
 class FileManager {
-    public static function read(string $filePath): string
+    public static function read(string $filePath,$default = null): string
     {
         if (!file_exists($filePath)) {
             throw new RuntimeException("Файл не найден: {$filePath}");
