@@ -1,24 +1,13 @@
 # ts4u
 The tc4u PHP framework
 
+## Установка
+git clone / composer require
+
+Если версия php ниже нужной:
 composer install --ignore-platform-reqs
 
-## Базовая структура каталогов приложения
-
-- **MainApp/**
-    - **Config/**
-       - **config.php**
-       - **pagedata.php**
-       - **routes.php**
-    - **Content/**
-    - **Controllers/**
-    - **Templates/**
-       - **base.php**
-    - **Logs/** 
-    - **public/**        
-       - **.htaccess**
-       - **index.php**
-
+## Структура фреймворка
 ```plaintext
 /Core
 │
@@ -49,6 +38,21 @@ composer install --ignore-platform-reqs
 └── Router.php              // Класс маршрутизатора, который управляет маршрутизацией
  ```
 
+## Базовая структура каталогов приложения
+
+- **MainApp/**
+    - **Config/**
+       - **config.php**
+       - **pagedata.php**
+       - **routes.php**
+    - **Content/**
+    - **Controllers/**
+    - **Templates/**
+       - **base.php**
+    - **Logs/** 
+    - **public/**        
+       - **.htaccess**
+       - **index.php**
 
 ## config.php format
 ```php
