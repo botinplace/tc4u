@@ -60,14 +60,6 @@ class Router
 		trigger_error("Ошибка при загрузке файла $this->routesFile: " . $e->getMessage(), E_USER_WARNING);
         $routes = [];
     }
-        
-        /*
-        $routes = file_exists($this->routesFile)
-            ? includ $this->routesFile
-            : [];
-        $routes
-        $this->setRoutes($routes);
-        */
         $this->setRoutes($routes);
     }
 
@@ -87,7 +79,6 @@ class Router
                     // добавить $data["onlyforguest"] ?? false,
                     $key
                 );
-                  //$this->routes[] = $route;
                   //$this->routes[$method][$routeData["path"]] = $route;
                  $this->routes[$method][] = $route;
              }            
@@ -158,17 +149,7 @@ class Router
         }
 
         $basename = ucfirst(basename($route->path));
-        /*
-        $this->pageData["basetemplate"] = isset($route->basetemplate)
-            ? $route->basetemplate
-            : "base";
-        
-        $this->pageData["contentFile"] = isset($route->contentfile)
-            ? $route->contentfile
-            : (!empty($basename)
-                ? $basename
-                : "Index");
-        */
+
         $this->pageData["routename"] = isset($route->name)
             ? $route->name
             : '';
