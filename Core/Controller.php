@@ -68,11 +68,6 @@ class Controller
     private function handleAjaxRequest($extra_vars)
     {
         if ($this->xmlhttprequest && !$this->get_main_block_only) {
-	/*
-            header("Content-Type: application/json; charset=utf-8");
-            echo json_encode($extra_vars["json_response"] ?? []);
-            exit();
-	*/
 		$data = $extra_vars["json_response"] ?? [];
 		$this->response->setJsonBody( $data );
 		$this->response->send();
@@ -371,11 +366,6 @@ private function replaceFor(array $matches): string {
 
     private function renderMainBlock(array $fast_array): void
     {
-	/*
-        header(
-            "X-Page-Title: " . base64_encode($this->pagedata["pagetitle"] ?? "")
-        );
-	*/
 	$newheader = base64_encode($this->pagedata["pagetitle"] ?? "");
 	$this->response->setHeader('X-Page-Title:',$newheader);
 	    
