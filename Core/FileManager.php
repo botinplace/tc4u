@@ -4,12 +4,19 @@ namespace Core;
 use RuntimeException;
 
 class FileManager {
+    // Возвращает(подключает) файл
+    public static function requireFile( string $filePath, $default = null): mixed
+    {
+        // тут вернуть require ... или [] 
+        // Ещё проверить на ошибки самого файла (если например php,json и т.д) 
+        // например ести контент фала <?php return ['arr'=>'1','arr2'=>2,,[o= ] // ошибка...
+    }
+    // Возвращает содержимое файла
     public static function read(string $filePath,$default = null): string
     {
         if (!file_exists($filePath)) {
             throw new RuntimeException("Файл не найден: {$filePath}");
         }
-        // Ещё проверить на ошибки самого файла (если например php,json и т.д)
         return file_get_contents($filePath);
     }
 
