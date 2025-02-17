@@ -13,15 +13,20 @@ class FileManager {
         }
 
         // Подключение файла и обработка ошибок
-        $result = @require $filePath;
+        try {
+            $result = require $filePath;
+        } catch (Exception $e) {
+            throw new RuntimeException("Ошибка при подключении к файлу: {$filePath}. Ошибка: " . $e->getMessage());
+        }
 
         // Проверка на ошибки при подключении
         if ($result === false) {
             throw new RuntimeException("Ошибка при подключении к файлу: {$filePath}");
         }
 
+        
         // Проверка на ожидаемый формат данных (можно изменить в зависимости от ожиданий)
-        if (!is_array($result) && !is_null($result)) {
+        if( gettype($result)!= gettype($default) ){
             throw new RuntimeException("Файл должен возвращать массив или null: {$filePath}");
         }
 
