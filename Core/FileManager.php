@@ -5,11 +5,27 @@ use RuntimeException;
 
 class FileManager {
     // Возвращает(подключает) файл
-    public static function requireFile( string $filePath, $default = null): mixed
+    public static function requireFile(string $filePath, $default = []): mixed
     {
-        // тут вернуть require ... или [] 
-        // Ещё проверить на ошибки самого файла (если например php,json и т.д) 
-        // например ести контент фала <?php return ['arr'=>'1','arr2'=>2,,[o= ] // ошибка...
+        // Проверка на существование файла
+        if (!file_exists($filePath)) {
+            throw new RuntimeException("Файл не найден: {$filePath}");
+        }
+
+        // Подключение файла и обработка ошибок
+        $result = @require $filePath;
+
+        // Проверка на ошибки при подключении
+        if ($result === false) {
+            throw new RuntimeException("Ошибка при подключении к файлу: {$filePath}");
+        }
+
+        // Проверка на ожидаемый формат данных (можно изменить в зависимости от ожиданий)
+        if (!is_array($result) && !is_null($result)) {
+            throw new RuntimeException("Файл должен возвращать массив или null: {$filePath}");
+        }
+
+        return $result ?? $default;
     }
     // Возвращает содержимое файла
     public static function read(string $filePath,$default = null): string
