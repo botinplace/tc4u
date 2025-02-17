@@ -98,6 +98,8 @@ return [
     ...
 ];
 
+```
+
 ## pagedata.php format
 
 ```php
