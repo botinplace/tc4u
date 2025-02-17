@@ -19,6 +19,7 @@ composer install --ignore-platform-reqs
        - **.htaccess**
        - **index.php**
         
+```
 
 ## routes.php format
 
