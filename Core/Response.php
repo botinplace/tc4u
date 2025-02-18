@@ -25,6 +25,9 @@ class Response {
     }
 
     public function send(): void {
+        if (headers_sent()) {
+            throw new \RuntimeException('Headers already sent.');
+        }
         http_response_code($this->statusCode);
         foreach ($this->headers as $name => $value) {
             header("{$name}: {$value}");
