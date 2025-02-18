@@ -89,6 +89,8 @@ define( 'AD_DOMAIN2', 'domain2' );
 // Доступные методы
 define( 'ALLOWED_METHODS', 'GET,POST,PUT,DELETE,OPTIONS,HEAD' );
 
+// Default needauth / onlyforguest
+
 // Страница авторизации (если пользователь не авторизован)
 define('AUTH_PATH','/auth');
 
