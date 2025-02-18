@@ -50,6 +50,8 @@ composer install --ignore-platform-reqs
        - **routes.php**
     - **Content/**
     - **Controllers/**
+    - **Models/**
+    - **Repositories/**
     - **Templates/**
        - **base.php**
     - **Logs/** 
