@@ -141,15 +141,8 @@ private function loadPageData($pagename = ''): array
         );
     }
 
-    private function resolvePlaceholder(
-        array $matches,
-        array $fast_array
-    ): string {
-        $filter = $matches[2] ?? false;
-        //$key = "{{" . trim($matches[1]) . "}}";
-        //$value = $fast_array[$key] ?? $key;
-
-    $key = trim($matches[1]);
+    private function getValueFromFastArray(string $key, array $fast_array)
+{
     $keys = explode('.', $key);
     $value = $fast_array;
 
@@ -159,28 +152,50 @@ private function loadPageData($pagename = ''): array
         } elseif (isset($value[$k])) {
             $value = $value[$k];
         } else {
-            return "{{" . $key . "}}";
+            return null; // Если ключ не найден, возвращаем null
         }
     }
-	    
 
-        if (is_array($value)) {
-            return "Array";
-        }
-        if (is_object($value)) {
-            return "Object";
-        }
+    return $value;
+}
+ 
+ private function resolvePlaceholder(array $matches, array $fast_array): string
+{
+    $filter = $matches[2] ?? false;
+    $key = trim($matches[1]);
 
-        return $filter === "html"
-            ? html_entity_decode($value)
-            : htmlspecialchars(html_entity_decode($value), ENT_QUOTES, "UTF-8");
+    // Получаем значение из fast_array
+    $value = $this->getValueFromFastArray($key, $fast_array);
+
+    // Если значение не найдено, возвращаем оригинальный плейсхолдер
+    if ($value === null) {
+        return "{{" . $key . "}}";
     }
+
+    // Обрабатываем значение в зависимости от типа
+    if (is_array($value)) {
+        return "Array";
+    }
+    if (is_object($value)) {
+        return "Object";
+    }
+
+    // Применяем фильтр
+    return $filter === "html"
+        ? html_entity_decode($value)
+        : htmlspecialchars(html_entity_decode($value), ENT_QUOTES, "UTF-8");
+}
 
     private function processForeach(array $matches, array $fast_array): string
     {
         $arrayKey = "{{" . trim($matches[1]) . "}}";
         $content = $matches[2];
         $output = "";
+
+
+    $key = trim($matches[1]);
+
+    $fast_array[$arrayKey]= $this->getValueFromFastArray($key, $fast_array);//$value;
 
         if (
             empty($fast_array[$arrayKey]) ||
