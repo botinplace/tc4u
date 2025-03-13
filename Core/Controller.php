@@ -115,9 +115,13 @@ private function replacePlaceholders(
         "/\\\\?{\\{?\s*([a-zA-Z0-9-_.]*)\s*[|]?\s*([a-zA-Z0-9]*)\s*\\}?\\}/sm",
         function ($matches) use ($fast_array,$inforeach) {
             // Если плейсхолдер экранирован (начинается с {{{)
-            if (strpos($matches[0], '\\') === 0 || ( $inforeach && ($matches[1] == 'key' || $matches[1] == 'value') )) {
+            if ( (strpos($matches[0], '\\') === 0) ) {
                 // Возвращаем плейсхолдер без экранирования
                 return "{{" . $matches[1] . "}}";
+            }
+
+            if( $inforeach && ( $matches[1] == 'key' || $matches[1] == 'value') ){
+                return "{{" . $matches[1] . $inforeach."}}";
             }
 
             // Обычный плейсхолдер
@@ -171,6 +175,7 @@ private function replacePlaceholders(
         return "{{" . $key . "}}";
     }
 
+
     // Обрабатываем значение в зависимости от типа
     if (is_array($value)) {
         return "Array";
@@ -179,6 +184,7 @@ private function replacePlaceholders(
         return "Object";
     }
 
+    if($filter!='html' ){ $value=preg_replace('/\{%(\s*)if/', '\{%$1if', $value);}
     // Применяем фильтр
     return $filter === "html"
         ? html_entity_decode($value)
@@ -252,8 +258,11 @@ private function processIfConditions(
     array $fast_array
 ): string {
     return preg_replace_callback(
-        "/{%\s*if\s+([^ ]+)\s*(==|!=)\s*([^ ]+)\s*%}(.*?){%\s*endif\s*%}/sm",
+        "/\\\\?{%\s*if\s+([^ ]+)\s*(==|!=)\s*([^ ]+)\s*%}(.*?){%\s*endif\s*%}/sm",
         function ($ifMatches) use ($key, $value, $fast_array) {
+            if ( (strpos($ifMatches[0], '\\') === 0) ) {
+                return ltrim($ifMatches[0],'\\');
+            }
             $leftValue = $this->getValueForComparison(
                 trim($ifMatches[1]),
                 $key,
@@ -312,29 +321,6 @@ private function replacePlaceholdersInOutput(
     $output = $this->processIfConditions($output, null, null, $fast_array); // Обработка условий вне цикла
     return $output;
 }
-
-    /*
-private function replaceFor(array $matches): string {
-    $start = (int)$matches[1];
-    $end = (int)$matches[2];
-    $step = (int)$matches[3];
-    $content = $matches[4];
-    $output = '';
-
-    for ($i = $start; $i <= $end; $i += $step) {
-        $loopContent = $content;
-        $loopContent = preg_replace_callback(
-            '/{{\s*i\s*}}/sm',
-            function($innerMatches) use ($i) {
-                return htmlspecialchars($i, ENT_QUOTES, 'UTF-8'); 
-            },
-            $loopContent
-        );
-        $output .= $loopContent;
-    }
-    return $output;
-}
-*/
 
     public function render(array $extra_vars = [])
     {
