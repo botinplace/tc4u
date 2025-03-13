@@ -307,8 +307,8 @@ private function replacePlaceholdersInOutput(
     $output,
     array $fast_array
 ): string {
-    $output = $this->replacePlaceholders($output, $fast_array,true);
     $output = $this->replaceForeachLoop($output, $fast_array);
+    $output = $this->replacePlaceholders($output, $fast_array);    
     $output = $this->processIfConditions($output, null, null, $fast_array); // Обработка условий вне цикла
     return $output;
 }
