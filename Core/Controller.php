@@ -146,8 +146,23 @@ private function loadPageData($pagename = ''): array
         array $fast_array
     ): string {
         $filter = $matches[2] ?? false;
-        $key = "{{" . trim($matches[1]) . "}}";
-        $value = $fast_array[$key] ?? $key;
+        //$key = "{{" . trim($matches[1]) . "}}";
+        //$value = $fast_array[$key] ?? $key;
+
+    $key = trim($matches[1]);
+    $keys = explode('.', $key);
+    $value = $fast_array;
+
+    foreach ($keys as $k) {
+        if (isset($value["{{" . $k . "}}"])) {
+            $value = $value["{{" . $k . "}}"];
+        } elseif (isset($value[$k])) {
+            $value = $value[$k];
+        } else {
+            return "{{" . $key . "}}";
+        }
+    }
+	    
 
         if (is_array($value)) {
             return "Array";
