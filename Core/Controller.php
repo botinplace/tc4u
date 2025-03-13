@@ -106,24 +106,16 @@ private function loadPageData($pagename = ''): array
         return file_exists($filePath) ? file_get_contents($filePath) : "";
     }
 
-    private function replacePlaceholdersInOutput2(
-        $output,
-        array $fast_array
-    ): string {
-        $output = $this->replacePlaceholders($output, $fast_array);
-        $output = $this->replaceForeachLoop($output, $fast_array);
-        return $output;
-    }
-
 private function replacePlaceholders(
     string $output,
-    array $fast_array
+    array $fast_array,
+    bool $inforeach=false
 ): string {
     return preg_replace_callback(
         "/\\\\?{\\{?\s*([a-zA-Z0-9-_.]*)\s*[|]?\s*([a-zA-Z0-9]*)\s*\\}?\\}/sm",
-        function ($matches) use ($fast_array) {
+        function ($matches) use ($fast_array,$inforeach) {
             // Если плейсхолдер экранирован (начинается с {{{)
-            if (strpos($matches[0], '\\') === 0) {
+            if (strpos($matches[0], '\\') === 0 || ( $inforeach && ($matches[1] == 'key' || $matches[1] == 'value') )) {
                 // Возвращаем плейсхолдер без экранирования
                 return "{{" . $matches[1] . "}}";
             }
@@ -315,11 +307,35 @@ private function replacePlaceholdersInOutput(
     $output,
     array $fast_array
 ): string {
-    $output = $this->replacePlaceholders($output, $fast_array);
+    $output = $this->replacePlaceholders($output, $fast_array,true);
     $output = $this->replaceForeachLoop($output, $fast_array);
     $output = $this->processIfConditions($output, null, null, $fast_array); // Обработка условий вне цикла
     return $output;
 }
+
+    /*
+private function replaceFor(array $matches): string {
+    $start = (int)$matches[1];
+    $end = (int)$matches[2];
+    $step = (int)$matches[3];
+    $content = $matches[4];
+    $output = '';
+
+    for ($i = $start; $i <= $end; $i += $step) {
+        $loopContent = $content;
+        $loopContent = preg_replace_callback(
+            '/{{\s*i\s*}}/sm',
+            function($innerMatches) use ($i) {
+                return htmlspecialchars($i, ENT_QUOTES, 'UTF-8'); 
+            },
+            $loopContent
+        );
+        $output .= $loopContent;
+    }
+    return $output;
+}
+*/
+
     public function render(array $extra_vars = [])
     {
         ob_get_clean();
