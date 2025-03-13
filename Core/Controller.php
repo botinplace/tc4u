@@ -106,7 +106,7 @@ private function loadPageData($pagename = ''): array
         return file_exists($filePath) ? file_get_contents($filePath) : "";
     }
 
-    private function replacePlaceholdersInOutput(
+    private function replacePlaceholdersInOutput2(
         $output,
         array $fast_array
     ): string {
@@ -115,18 +115,25 @@ private function loadPageData($pagename = ''): array
         return $output;
     }
 
-    private function replacePlaceholders(
-        string $output,
-        array $fast_array
-    ): string {
-        return preg_replace_callback(
-            "/{{\s*([a-zA-Z0-9-_.]*)\s*[|]?\s*([a-zA-Z0-9]*)\s*}}/sm",
-            function ($matches) use ($fast_array) {
-                return $this->resolvePlaceholder($matches, $fast_array);
-            },
-            $output
-        );
-    }
+private function replacePlaceholders(
+    string $output,
+    array $fast_array
+): string {
+    return preg_replace_callback(
+        "/\\\\?{\\{?\s*([a-zA-Z0-9-_.]*)\s*[|]?\s*([a-zA-Z0-9]*)\s*\\}?\\}/sm",
+        function ($matches) use ($fast_array) {
+            // Если плейсхолдер экранирован (начинается с {{{)
+            if (strpos($matches[0], '\\') === 0) {
+                // Возвращаем плейсхолдер без экранирования
+                return "{{" . $matches[1] . "}}";
+            }
+
+            // Обычный плейсхолдер
+            return $this->resolvePlaceholder($matches, $fast_array);
+        },
+        $output
+    );
+}
 
     private function replaceForeachLoop(
         string $output,
@@ -187,42 +194,40 @@ private function loadPageData($pagename = ''): array
 }
 
     private function processForeach(array $matches, array $fast_array): string
-    {
-        $arrayKey = "{{" . trim($matches[1]) . "}}";
-        $content = $matches[2];
-        $output = "";
-
+{
+    $arrayKey = "{{" . trim($matches[1]) . "}}";
+    $content = $matches[2];
+    $output = "";
 
     $key = trim($matches[1]);
+    $fast_array[$arrayKey] = $this->getValueFromFastArray($key, $fast_array);
 
-    $fast_array[$arrayKey]= $this->getValueFromFastArray($key, $fast_array);//$value;
-
-        if (
-            empty($fast_array[$arrayKey]) ||
-            !is_array($fast_array[$arrayKey])
-        ) {
-            return ""; // Можно выбрасывать исключение или вести лог
-        }
-
-        foreach ($fast_array[$arrayKey] as $key => $value) {
-            $loopContent = $this->replaceLoopPlaceholders(
-                $content,
-                $value,
-                $key
-            );
-
-            // Обработка условий
-            $loopContent = $this->processIfConditions(
-                $loopContent,
-                $key,
-                $value,
-                $fast_array
-            );
-            $output .= $loopContent;
-        }
-
-        return $output;
+    if (
+        empty($fast_array[$arrayKey]) ||
+        !is_array($fast_array[$arrayKey])
+    ) {
+        return ""; // Можно выбрасывать исключение или вести лог
     }
+
+    foreach ($fast_array[$arrayKey] as $key => $value) {
+        $loopContent = $this->replaceLoopPlaceholders(
+            $content,
+            $value,
+            $key
+        );
+
+        // Обработка условий внутри цикла
+        $loopContent = $this->processIfConditions(
+            $loopContent,
+            $key,
+            $value,
+            $fast_array
+        );
+        $output .= $loopContent;
+    }
+
+    return $output;
+}
 
     private function replaceLoopPlaceholders(
         string $content,
@@ -248,77 +253,73 @@ private function loadPageData($pagename = ''): array
         return $content;
     }
 
-    private function processIfConditions(
-        string $content,
-        $key,
-        $value,
-        array $fast_array
-    ): string {
-        return preg_replace_callback(
-            "/{%\s*if\s+([^ ]+)\s*(==|!=)\s*([^ ]+)\s*%}(.*?){%\s*endif\s*%}/sm",
-            function ($ifMatches) use ($key, $value, $fast_array) {
-                $leftValue = $this->getValueForComparison(
-                    trim($ifMatches[1]),
-                    $key,
-                    $value,
-                    $fast_array
-                );
-                $operator = trim($ifMatches[2]);
-                $rightValue = $this->getValueForComparison(
-                    trim($ifMatches[3]),
-                    $key,
-                    $value,
-                    $fast_array
-                );
+private function processIfConditions(
+    string $content,
+    $key = null,
+    $value = null,
+    array $fast_array
+): string {
+    return preg_replace_callback(
+        "/{%\s*if\s+([^ ]+)\s*(==|!=)\s*([^ ]+)\s*%}(.*?){%\s*endif\s*%}/sm",
+        function ($ifMatches) use ($key, $value, $fast_array) {
+            $leftValue = $this->getValueForComparison(
+                trim($ifMatches[1]),
+                $key,
+                $value,
+                $fast_array
+            );
+            $operator = trim($ifMatches[2]);
+            $rightValue = $this->getValueForComparison(
+                trim($ifMatches[3]),
+                $key,
+                $value,
+                $fast_array
+            );
 
-                if (
-                    ($operator === "==" && $leftValue == $rightValue) ||
-                    ($operator === "!=" && $leftValue != $rightValue)
-                ) {
-                    return $ifMatches[4]; // Возвращаем содержимое, если условие истинно
-                }
-                return ""; // Возвращаем пустую строку, если условие ложно
-            },
-            $content
-        );
+            if (
+                ($operator === "==" && $leftValue == $rightValue) ||
+                ($operator === "!=" && $leftValue != $rightValue)
+            ) {
+                return $ifMatches[4]; // Возвращаем содержимое, если условие истинно
+            }
+            return ""; // Возвращаем пустую строку, если условие ложно
+        },
+        $content
+    );
+}
+
+private function getValueForComparison(
+    $variable,
+    $key = null,
+    $value = null,
+    array $fast_array
+) {
+    // Если переменная является "key" или "value" внутри цикла
+    if ($variable === "key" && $key !== null) {
+        return $key;
+    }
+    if ($variable === "value" && $value !== null) {
+        return $value;
     }
 
-    // Вспомогательная функция для получения значения по сравнению
-    private function getValueForComparison($variable, $key, $value, $fast_array)
-    {
-        if ($variable == "key") {
-            return $key; // Возвращаем ключ
-        } elseif ($variable == "value") {
-            return $value; // Возвращаем значение
-        } else {
-            return $fast_array["{{" . $variable . "}}"] ??
-                htmlspecialchars($variable); // Проверяем в fast_array
-        }
+    // Если переменная является ключом из fast_array
+    if (isset($fast_array["{{" . $variable . "}}"])) {
+        return $fast_array["{{" . $variable . "}}"];
     }
 
-    /*
-private function replaceFor(array $matches): string {
-    $start = (int)$matches[1];
-    $end = (int)$matches[2];
-    $step = (int)$matches[3];
-    $content = $matches[4];
-    $output = '';
+    // Если переменная является строкой (например, "true", "false", число и т.д.)
+    return htmlspecialchars($variable); // Возвращаем значение как есть
+}
 
-    for ($i = $start; $i <= $end; $i += $step) {
-        $loopContent = $content;
-        $loopContent = preg_replace_callback(
-            '/{{\s*i\s*}}/sm',
-            function($innerMatches) use ($i) {
-                return htmlspecialchars($i, ENT_QUOTES, 'UTF-8'); 
-            },
-            $loopContent
-        );
-        $output .= $loopContent;
-    }
+private function replacePlaceholdersInOutput(
+    $output,
+    array $fast_array
+): string {
+    $output = $this->replacePlaceholders($output, $fast_array);
+    $output = $this->replaceForeachLoop($output, $fast_array);
+    $output = $this->processIfConditions($output, null, null, $fast_array); // Обработка условий вне цикла
     return $output;
 }
-*/
-
     public function render(array $extra_vars = [])
     {
         ob_get_clean();
