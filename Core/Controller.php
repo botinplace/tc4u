@@ -131,21 +131,19 @@ private function replacePlaceholders(
     );
 }
 
-    private function replaceForeachLoop(
-        string $output,
-        array $fast_array
-    ): string {
-        return preg_replace_callback(
-            "/\\\\?{%\s*foreach\s+([a-zA-Z0-9-_.]*)\s*%}(.*?){%\s*endforeach\s*%}/sm",
-            function ($matches) use ($fast_array) {
-		if ( (strpos($matches[0], '\\') === 0) ) {
-                    return ltrim($matches[0],'\\');
-                }
-                return $this->processForeach($matches, $fast_array);
-            },
-            $output
-        );
-    }
+private function replaceForeachLoop(string $output, array $fast_array): string
+{
+    return preg_replace_callback(
+        "/\\\\?{%\s*foreach\s+([a-zA-Z0-9-_.]*)\s*%}((?:(?R)|.*?)*){%\s*endforeach\s*%}/sm",
+        function ($matches) use ($fast_array) {
+            if (strpos($matches[0], '\\') === 0) {
+                return ltrim($matches[0], '\\');
+            }
+            return $this->processForeach($matches, $fast_array);
+        },
+        $output
+    );
+}
 
     private function getValueFromFastArray(string $key, array $fast_array)
 {
