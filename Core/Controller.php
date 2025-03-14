@@ -136,8 +136,11 @@ private function replacePlaceholders(
         array $fast_array
     ): string {
         return preg_replace_callback(
-            "/{%\s*foreach\s+([a-zA-Z0-9-_.]*)\s*%}(.*?){%\s*endforeach\s*%}/sm",
+            "/\\\\?{%\s*foreach\s+([a-zA-Z0-9-_.]*)\s*%}(.*?){%\s*endforeach\s*%}/sm",
             function ($matches) use ($fast_array) {
+		if ( (strpos($matches[0], '\\') === 0) ) {
+                    return ltrim($matches[0],'\\');
+                }
                 return $this->processForeach($matches, $fast_array);
             },
             $output
