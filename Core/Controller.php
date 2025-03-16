@@ -254,8 +254,8 @@ private function replaceForeachLoop(string $output, array $fast_array): string
 
 private function processIfConditions(
     string $content,
-    $key = null,
-    $value = null,
+    string $key = null,
+    string $value = null,
     array $fast_array
 ): string {
     return preg_replace_callback(
@@ -292,8 +292,8 @@ private function processIfConditions(
 
 private function getValueForComparison(
     $variable,
-    $key = null,
-    $value = null,
+    string $key = null,
+    string $value = null,
     array $fast_array
 ) {
     // Если переменная является "key" или "value" внутри цикла
