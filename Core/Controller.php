@@ -228,34 +228,59 @@ private function replaceForeachLoop(string $output, array $fast_array): string
     return $output;
 }
 
-    private function replaceLoopPlaceholders(
-        string $content,
-        $value,
-        $key
-    ): string {
-        $content = preg_replace_callback(
-            "/{{\s*value\s*}}/sm",
-            function ($innerMatches) use ($value) {
-                return htmlspecialchars($value, ENT_QUOTES, "UTF-8");
-            },
-            $content
-        );
+private function replaceLoopPlaceholders(
+    string $content,
+    $value,
+    $key
+): string {
+    // Обработка вложенных плейсхолдеров, таких как {{ value.user.profile.name }}
+    $content = preg_replace_callback(
+        "/{{\s*value\.([a-zA-Z0-9_.-]+)\s*}}/sm",
+        function ($innerMatches) use ($value) {
+            if (is_array($value)) {
+                $keys = explode('.', $innerMatches[1]);
+                $currentValue = $value;
+                foreach ($keys as $nestedKey) {
+                    if (isset($currentValue[$nestedKey])) {
+                        $currentValue = $currentValue[$nestedKey];
+                    } else {
+                        return ""; // Если ключ не найден, возвращаем пустую строку
+                    }
+                }
+                return htmlspecialchars($currentValue, ENT_QUOTES, "UTF-8");
+            }
+            return "";
+        },
+        $content
+    );
 
-        $content = preg_replace_callback(
-            "/{{\s*key\s*}}/sm",
-            function ($innerMatches) use ($key) {
-                return htmlspecialchars($key, ENT_QUOTES, "UTF-8");
-            },
-            $content
-        );
+    // Остальная часть метода остается без изменений
+    $content = preg_replace_callback(
+        "/{{\s*value\s*}}/sm",
+        function ($innerMatches) use ($value) {
+            if (is_array($value)) {
+                return "Array";
+            }
+            return htmlspecialchars($value, ENT_QUOTES, "UTF-8");
+        },
+        $content
+    );
 
-        return $content;
-    }
+    $content = preg_replace_callback(
+        "/{{\s*key\s*}}/sm",
+        function ($innerMatches) use ($key) {
+            return htmlspecialchars($key, ENT_QUOTES, "UTF-8");
+        },
+        $content
+    );
+
+    return $content;
+}
 
 private function processIfConditions(
     string $content,
     string $key = null,
-    string $value = null,
+    mixed $value = null,
     array $fast_array
 ): string {
     return preg_replace_callback(
