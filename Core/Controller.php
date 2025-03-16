@@ -192,7 +192,7 @@ private function replaceForeachLoop(string $output, array $fast_array): string
         : htmlspecialchars(html_entity_decode($value), ENT_QUOTES, "UTF-8");
 }
 
-    private function processForeach(array $matches, array $fast_array): string
+private function processForeach(array $matches, array $fast_array): string
 {
     $arrayKey = "{{" . trim($matches[1]) . "}}";
     $content = $matches[2];
@@ -209,6 +209,11 @@ private function replaceForeachLoop(string $output, array $fast_array): string
     }
 
     foreach ($fast_array[$arrayKey] as $key => $value) {
+        // Сохраняем текущие значения key и value из внешнего цикла
+        $outerKey = $key;
+        $outerValue = $value;
+
+        // Обрабатываем вложенные плейсхолдеры
         $loopContent = $this->replaceLoopPlaceholders(
             $content,
             $value,
@@ -222,6 +227,10 @@ private function replaceForeachLoop(string $output, array $fast_array): string
             $value,
             $fast_array
         );
+
+        // Обрабатываем вложенные циклы
+        $loopContent = $this->replaceForeachLoop($loopContent, $fast_array);
+
         $output .= $loopContent;
     }
 
@@ -254,7 +263,7 @@ private function replaceLoopPlaceholders(
         $content
     );
 
-    // Остальная часть метода остается без изменений
+    // Обработка простого плейсхолдера {{ value }}
     $content = preg_replace_callback(
         "/{{\s*value\s*}}/sm",
         function ($innerMatches) use ($value) {
@@ -266,6 +275,7 @@ private function replaceLoopPlaceholders(
         $content
     );
 
+    // Обработка плейсхолдера {{ key }}
     $content = preg_replace_callback(
         "/{{\s*key\s*}}/sm",
         function ($innerMatches) use ($key) {
@@ -327,6 +337,31 @@ private function getValueForComparison(
     }
     if ($variable === "value" && $value !== null) {
         return $value;
+    }
+
+    // Если переменная содержит вложенные ключи (например, value.id)
+    if (strpos($variable, '.') !== false) {
+        $keys = explode('.', $variable);
+
+        // Начинаем с $value
+        $currentValue = $value;
+
+        // Проходим по каждому ключу
+        foreach ($keys as $nestedKey) {
+            if ($nestedKey === 'value') {
+                continue;
+            }
+
+            if (is_array($currentValue) && isset($currentValue[$nestedKey])) {
+                $currentValue = $currentValue[$nestedKey];
+            } elseif (is_object($currentValue) && isset($currentValue->$nestedKey)) {
+                $currentValue = $currentValue->$nestedKey;
+            } else {
+                return null; // Если ключ не найден, возвращаем null
+            }
+        }
+
+        return $currentValue;
     }
 
     // Если переменная является ключом из fast_array
