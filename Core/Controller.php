@@ -16,7 +16,6 @@ class Controller
     public $page_not_found = false;
     public $get_main_block_only = false;
     public $pagedata;
-    private $fast_array;
     private $response;
     private $templateEngine;
 
