@@ -125,7 +125,7 @@ private function loadPageData($pagename = ''): array
         $this->handleAjaxRequest([]);
 
         extract($this->pagedata);
-        
+
         $extra_vars["this_project_version"] = "v.1.0.0";
         $extra_vars["SITE_URI"] = FIXED_URL;
 
@@ -146,21 +146,17 @@ private function loadPageData($pagename = ''): array
 
     public function handleNotFound(): void
     {
-	// заменить на $this->response->setHeader !!!
-        header("Content-type: text/html; charset=utf-8");
-        header("HTTP/1.0 404 Not Found");
-	$this->content = $this->loadContent('404');
+        $this->response->setStatusCode(404);
+        $this->response->setHeader('Content-Type', 'text/html; charset=utf-8');
+	    $this->content = $this->loadContent('404');
         $this->page_not_found = true;
         $this->render();
     }
 
     private function setCacheHeaders(): void
     {
-	// заменить на $this->response->setHeader !! и проверить возможно это в конфиг вынести
-        header("Cache-control: public");
-        header(
-            "Expires: " . gmdate("D, d M Y H:i:s", time() + 60 * 60) . " GMT"
-        );
+        $this->response->setHeader('Cache-control', 'public');
+        $this->response->setHeader('Expires', gmdate('D, d M Y H:i:s', time() + 60 * 60) . ' GMT');
     }
 
     private function handleTemplateNotFound(): void
@@ -176,9 +172,7 @@ private function loadPageData($pagename = ''): array
 	    
         echo $this->templateEngine->render( $this->content );
 
-        echo '<input type="hidden" id="NewTitleTextByOnlyMain" value="' .
-            ($this->pagedata["pagetitle"] ?? "") .
-            '" />';
+        echo '<input type="hidden" id="NewTitleTextByOnlyMain" value="' .($this->pagedata["pagetitle"] ?? "") .'" />';
         if ($this->reload_page) {
             echo '<input type="hidden" id="ReloadPageByOnlyMain" value="1" />';
         }
