@@ -30,7 +30,7 @@ class TemplateEngine
         $this->fast_array = array_merge($this->fast_array, $this->prepareExtraVars($data));
         $output = $this->replaceForeachLoop($template, $this->fast_array);
         $output = $this->replacePlaceholders($output, $this->fast_array);
-        $output = $this->processIfConditions($output, null, null, $this->fast_array);
+        $output = $this->processIfConditions($output, $this->fast_array, null, null);
         return $output;
     }
 
@@ -153,9 +153,9 @@ private function processForeach(array $matches, array $fast_array): string
         // Обработка условий внутри цикла
         $loopContent = $this->processIfConditions(
             $loopContent,
+            $fast_array,
             $key,
-            $value,
-            $fast_array
+            $value            
         );
 
         // Обрабатываем вложенные циклы
@@ -219,9 +219,9 @@ private function replaceLoopPlaceholders(
 
 private function processIfConditions(
     string $content,
+    array $fast_array,
     ?string $key = null,
-    mixed $value = null,
-    array $fast_array
+    mixed $value = null    
 ): string {
     return preg_replace_callback(
         "/\\\\?{%\s*if\s+([^ ]+)\s*(==|!=)\s*([^ ]+)\s*%}(.*?){%\s*endif\s*%}/sm",
@@ -231,16 +231,16 @@ private function processIfConditions(
             }
             $leftValue = $this->getValueForComparison(
                 trim($ifMatches[1]),
+                $fast_array,
                 $key,
-                $value,
-                $fast_array
+                $value                
             );
             $operator = trim($ifMatches[2]);
             $rightValue = $this->getValueForComparison(
                 trim($ifMatches[3]),
+                $fast_array,
                 $key,
-                $value,
-                $fast_array
+                $value                
             );
 
             if (
@@ -257,9 +257,9 @@ private function processIfConditions(
 
 private function getValueForComparison(
     $variable,
+    array $fast_array,
     ?string $key = null,
-    mixed $value = null,
-    array $fast_array
+    mixed $value = null
 ) {
     // Если переменная является "key" или "value" внутри цикла
     if ($variable === "key" && $key !== null) {
