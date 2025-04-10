@@ -46,7 +46,7 @@ class Cache {
 
         $dataString = "<?php \nreturn " . var_export($data, true) . ";";
 		
-        if (file_put_contents($this->cacheFile, $dataString) === false) {
+        if (@file_put_contents($this->cacheFile, $dataString) === false) {
             throw new RuntimeException("Не удалось записать данные в файл кэша: {$this->cacheFile}");
         }
     }
