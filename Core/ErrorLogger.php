@@ -24,7 +24,7 @@ class ErrorLogger {
             
             error_log($e->getMessage());
             
-            //throw $e;
+            throw $e;
         }
     
     }
