@@ -37,19 +37,25 @@ class Cache {
         return $routes ?? []; // Возвращаем пустой массив, если кэш имеет недопустимое значение
     }
 
-    public function save($data): void {
-        if (!is_dir($this->cacheDir)) {
-            if (!mkdir($this->cacheDir, $this->permissions, true) && !is_dir($this->cacheDir) ) {
-                throw new RuntimeException("Не удалось создать директорию: {$this->cacheDir}");
-            }
-        }
+	public function save($data): void {
+		if (!is_dir($this->cacheDir)) {
 
-        $dataString = "<?php \nreturn " . var_export($data, true) . ";";
-		
-        if (@file_put_contents($this->cacheFile, $dataString) === false) {
-            throw new RuntimeException("Не удалось записать данные в файл кэша: {$this->cacheFile}");
-        }
-    }
+			if (!mkdir($this->cacheDir, $this->permissions, true) && !is_dir($this->cacheDir)) {
+				error_log("Не удалось создать директорию: {$this->cacheDir}");
+				return;
+			}
+		}
+
+		$dataString = "<?php \nreturn " . var_export($data, true) . ";";
+
+		try {
+			if (file_put_contents($this->cacheFile, $dataString) === false) {
+				throw new RuntimeException("Не удалось записать данные в файл кэша: {$this->cacheFile}");
+			}
+		} catch (RuntimeException $e) {
+			error_log($e->getMessage());
+		}
+	}
 
     public function clear(): void {
         if (file_exists($this->cacheFile)) {
