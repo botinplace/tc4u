@@ -6,6 +6,10 @@ class ErrorLogger {
     private $maxLines;
 
     public function __construct($logFile = 'error_log.txt', $maxLines = 1000) {
+        $logDir = dirname($logFile);
+        if (!is_dir($logDir)) {
+            mkdir($logDir, 0755, true);
+        }
         $this->logFile = $logFile;
         $this->maxLines = $maxLines;
         set_error_handler([$this, 'handleError']);
