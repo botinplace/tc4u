@@ -39,7 +39,7 @@ class Cache {
 
     public function save($data): void {
         if (!is_dir($this->cacheDir)) {
-            if (!mkdir($this->cacheDir, $this->permissions, true)) {
+            if (!mkdir($this->cacheDir, $this->permissions, true) && !is_dir($this->cacheDir) ) {
                 throw new RuntimeException("Не удалось создать директорию: {$this->cacheDir}");
             }
         }
