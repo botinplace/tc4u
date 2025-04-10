@@ -8,12 +8,12 @@ class ErrorLogger {
 
     public function __construct($logFile = 'error_log.txt', $maxLines = 1000) {
         $this->logDir = dirname($logFile);
-        if (!is_dir( $this->logDir )) {
-            if (!mkdir( $this->logDir , 0755, true) && !is_dir( $this->logDir )) {
-                throw new Exception("Не удалось создать директорию: $this->logDir ");
+        if (!is_dir($this->logDir)) {
+            if (!mkdir($this->logDir, 0755, true) && !is_dir($this->logDir)) {
+                throw new \Exception("Не удалось создать директорию: $this->logDir ");
             }
         }
-        
+    
         $this->logFile = $logFile;
         $this->maxLines = $maxLines;
         set_error_handler([$this, 'handleError']);
