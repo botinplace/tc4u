@@ -83,13 +83,9 @@ class Router
                  $this->routes[$method][] = $route;
              }            
         }
-    try {
+    
         $this->cache->save($this->routes);
-    } catch (RuntimeException $e) {
-            error_log($e->getMessage());
-            //$this->cacheEnabled = false;
-    }
-     
+    
     }
 
     public function dispatch(string $path): void
