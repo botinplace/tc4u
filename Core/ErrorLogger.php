@@ -2,14 +2,18 @@
 namespace Core;
 
 class ErrorLogger {
+    private $logDir;
     private $logFile;
     private $maxLines;
 
     public function __construct($logFile = 'error_log.txt', $maxLines = 1000) {
-        $logDir = dirname($logFile);
-        if (!is_dir($logDir)) {
-            mkdir($logDir, 0755, true);
+        $this->logDir = dirname($logFile);
+        if (!is_dir( $this->logDir )) {
+            if (!mkdir( $this->logDir , 0755, true) && !is_dir( $this->logDir )) {
+                throw new Exception("Не удалось создать директорию: $this->logDir ");
+            }
         }
+        
         $this->logFile = $logFile;
         $this->maxLines = $maxLines;
         set_error_handler([$this, 'handleError']);
@@ -28,8 +32,9 @@ class ErrorLogger {
         if ($this->exceedsMaxLines()) {
             $this->rotateLog();
         }
-        
-        file_put_contents($this->logFile, date('[Y-m-d H:i:s] ') . $message . PHP_EOL, FILE_APPEND);
+        if( is_dir( $this->logDir )  && is_writable( $this->logDir ) ){
+            file_put_contents($this->logFile, date('[Y-m-d H:i:s] ') . $message . PHP_EOL, FILE_APPEND);
+        }
     }
 
     private function exceedsMaxLines() {
