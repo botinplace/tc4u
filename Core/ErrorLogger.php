@@ -14,6 +14,12 @@ class ErrorLogger {
                     throw new \Exception("Не удалось создать директорию: $this->logDir ");
                 }
             }
+            
+        $this->logFile = $logFile;
+        $this->maxLines = $maxLines;
+        set_error_handler([$this, 'handleError']);
+        set_exception_handler([$this, 'handleException']);
+            
         } catch (\Exception $e) {
             
             error_log($e->getMessage());
@@ -21,10 +27,6 @@ class ErrorLogger {
             //throw $e;
         }
     
-        $this->logFile = $logFile;
-        $this->maxLines = $maxLines;
-        set_error_handler([$this, 'handleError']);
-        set_exception_handler([$this, 'handleException']);
     }
 
     public function handleError($errno, $errstr, $errfile, $errline) {
