@@ -128,6 +128,8 @@ private function loadPageData($pagename = ''): array
 
         $extra_vars["this_project_version"] = "v.1.0.0";
         $extra_vars["SITE_URI"] = FIXED_URL;
+	//pagetitle 
+	$extra_vars['pagetitle'] = isset($extra_vars['pagetitle']) ? $extra_vars['pagetitle'] : (isset($pagetitle) ? $pagetitle : '' );
 
         $this->templateEngine = new TemplateEngine($extra_vars);
         
