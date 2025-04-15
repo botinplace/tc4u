@@ -1,4 +1,6 @@
 <?php
+namespace Core\Database;
+
 class ClassNoDB
 {
     /**
