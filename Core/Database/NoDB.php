@@ -1,7 +1,9 @@
 <?php
 namespace Core\Database;
 
-class ClassNoDB
+use Core\Database\DatabaseInterface;
+
+class ClassNoDB implements DatabaseInterface
 {
     /**
      * Объект PDO (заглушка).
