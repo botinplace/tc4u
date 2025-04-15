@@ -5,15 +5,15 @@ class DatabaseFactory {
     public static function create($type) {
         switch ($type) {
             case 'pgsql':
-                return new Core\Database\PostgreSQL();
+                return new PostgreSQL();
             case 'mysql':
-                return new Core\Database\Mysql();
+                return new Mysql();
             case 'mssql':
-                return new Core\Database\Mssql();
+                return new Mssql();
             case 'sqli':
-                return new Core\Database\SQLi();
+                return new SQLi();
             case 'nodb':
-                return new  Core\Database\NoDB();
+                return new NoDB();
             default:
                 throw new \Exception("Неподдерживаемый тип базы данных: $type");
         }
