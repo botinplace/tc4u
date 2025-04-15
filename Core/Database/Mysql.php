@@ -1,7 +1,9 @@
 <?php
 namespace Core\Database;
 
-class DB {
+use Core\Database\DatabaseInterface;
+
+class Mysql implement DatabaseInterface {
     const DB_HOST = MYSQL_HOST; // localhost
     const DB_USER = MYSQL_USER;
     const DB_PASSWORD = MYSQL_PASS;
