@@ -1,4 +1,6 @@
 <?php
+namespace Core\Database;
+
 class DB {
     private $host = 'your_host';
     private $database = 'your_database';
