@@ -3,7 +3,7 @@ namespace Core\Database;
 
 use Core\Database\DatabaseInterface;
 
-class Mysql implement DatabaseInterface {
+class Mysql implements DatabaseInterface {
     const DB_HOST = MYSQL_HOST; // localhost
     const DB_USER = MYSQL_USER;
     const DB_PASSWORD = MYSQL_PASS;
