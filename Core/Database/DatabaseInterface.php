@@ -4,10 +4,10 @@ namespace Core\Database;
 
 interface DatabaseInterface
 {
-	public function add(string $sql, array $params = []);
-	public function set(string $sql, array $params = []);
-	public function getRow(string $sql, array $params = []);
-	public function getAll(string $sql, array $params = []);
-	public function getValue(string $sql, array $params = []);
-	public function getColumn(string $sql, array $params = []);
+	public static function add(string $sql, array $params = []);
+	public static function set(string $sql, array $params = []);
+	public static function getRow(string $sql, array $params = []);
+	public static function getAll(string $sql, array $params = []);
+	public static function getValue(string $sql, array $params = []);
+	public static function getColumn(string $sql, array $params = []);
 }
