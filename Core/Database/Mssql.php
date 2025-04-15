@@ -1,7 +1,9 @@
 <?php
 namespace Core\Database;
 
-class DB {
+use Core\Database\DatabaseInterface;
+    
+class Mssql implements DatabaseInterface {
     private $host = 'your_host';
     private $database = 'your_database';
     private $username = 'your_username';
