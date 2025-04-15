@@ -1,10 +1,11 @@
 <?php 
-namespace Core\Database\ClassPostgre;
+
+namespace Core\Database;
 
 use Core\Database\DatabaseInterface;
 use \PDO;
 
-class DB implements DatabaseInterface{
+class PostgreSQL implements DatabaseInterface{
     private static $dsn = "pgsql:host=" . POSTGRESQL_HOST . ";port=5432;dbname=" . POSTGRESQL_NAME . "; options='--client_encoding=UTF8'";
     private static $user = POSTGRESQL_USER;
     private static $pass = POSTGRESQL_PASS;
