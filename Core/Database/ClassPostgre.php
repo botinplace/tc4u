@@ -1,7 +1,7 @@
 <?php 
-namespace Core\DB\ClassPostgre;
+namespace Core\Database\ClassPostgre;
 
-use Core\DB\DatabaseInterface;
+use Core\Database\DatabaseInterface;
 use \PDO;
 
 class DB implements DatabaseInterface{
