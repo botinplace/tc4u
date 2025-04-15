@@ -1,5 +1,5 @@
 <?php
-namespace Core\DB;
+namespace Core\Database;
 
 class DatabaseFactory {
     public static function create($type) {
