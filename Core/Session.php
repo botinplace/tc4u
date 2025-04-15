@@ -5,8 +5,19 @@ class Session {
     // Старт сессии
     public static function start() {
         if (session_status() == PHP_SESSION_NONE) {
-            session_start();
+            session_start([    
+                'cookie_lifetime' => 86400,
+                'cookie_secure'   => true,
+                'cookie_httponly' => true,
+                'use_strict_mode' => true
+                          ]);
         }
+    }
+
+    // Регенирация идентификатора сессии
+    public static function regenerate() {
+        self::start();
+        session_regenerate_id(true);
     }
 
     // Установка значения
