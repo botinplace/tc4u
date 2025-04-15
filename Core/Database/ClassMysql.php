@@ -1,4 +1,6 @@
 <?php
+namespace Core\Database;
+
 class DB {
     const DB_HOST = MYSQL_HOST; // localhost
     const DB_USER = MYSQL_USER;
