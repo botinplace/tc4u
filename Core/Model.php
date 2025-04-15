@@ -1,5 +1,5 @@
 <?php
-namespace Core\Model;
+namespace Core;
 
 use Core\DB\DatabaseFactory;
 
