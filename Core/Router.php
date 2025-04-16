@@ -134,12 +134,14 @@ class Router
     {
         // Если роут требует авторизации и пользователь не авторизован
         if ($route->needAuth && !$this->isUserAuthenticated()) {
+	    error_log("Попытка несанкционированного доступа к маршруту: " . $route->path);
+
             if ( Request::isAjax() ) {
                 // Возврат JSON ответа для AJAX-запроса
-                $this->response->setJson( ['error' => 'Unauthorized', 'redirect' => '/auth'] );
+                $this->response->setJson( ['error' => 'Unauthorized', 'redirect' => AUTH_PATH ] );
             } else {
                 // Перенаправление для обычного запроса
-                $this->response->setHeader('location','/auth');
+                $this->response->setHeader('location', AUTH_PATH );
             }
             $this->send();
         }
@@ -186,7 +188,7 @@ class Router
 
     private function isUserAuthenticated(): bool
     {
-        return isset($_SESSION["user_id"]);
+        return isset( Session::get('user') );
     }
 
     private function toArray(): array
