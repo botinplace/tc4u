@@ -135,6 +135,7 @@ private function loadPageData($pagename = ''): array
 
         $extra_vars["this_project_version"] = "v.1.0.0";
         $extra_vars["SITE_URI"] = FIXED_URL;
+	$extra_vars["isUserAuthenticated"] = $this->isUserAuthenticated();
 	//pagetitle 
 	$extra_vars['pagetitle'] = isset($extra_vars['pagetitle']) ? $extra_vars['pagetitle'] : (isset($pagetitle) ? $pagetitle : '' );
 
