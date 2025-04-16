@@ -7,7 +7,7 @@ class Session {
         if (session_status() == PHP_SESSION_NONE) {
             session_start([    
                 'cookie_lifetime' => 86400,
-                'cookie_secure'   => true,
+                'cookie_secure'   => !empty($_SERVER['HTTPS']),
                 'cookie_httponly' => true,
                 'use_strict_mode' => true
                           ]);
