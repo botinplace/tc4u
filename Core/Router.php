@@ -130,6 +130,31 @@ class Router
         $this->handleNotFound(); // Обработка 404
     }
 
+  private function processMiddlewares(array $middlewares, array $params, array &$pagedata): bool
+    {
+        foreach ($middlewares as $middleware) {
+            if (!class_exists($middleware)) {
+                error_log("Middleware class {$middleware} не найден");
+                continue;
+            }
+            
+            $middlewareInstance = new $middleware();
+            
+            if (!method_exists($middlewareInstance, 'handle')) {
+                error_log("Middleware {$middleware} handle метод не найден");
+                continue;
+            }
+            
+            $result = $middlewareInstance->handle($params , $pagedata);
+            
+            if ($result === false) {            
+                return false;
+            }
+            
+        }
+        
+        return true;
+    }
     private function handleRoute(Route $route, array $params): void
     {
         // Если роут требует авторизации и пользователь не авторизован
@@ -161,6 +186,10 @@ class Router
         $this->pageData["needauth"] = isset($route->needAuth)
             ? $route->needAuth
             : false;
+
+	if (!$this->processMiddlewares($route->middlewares, $params,$this->pageData)) {
+            return;
+        }
 
         $controllerInstance = new $class($this->pageData); // Сюда pagedata!!!
         $controllerInstance->{$function}(...array_values($params));
