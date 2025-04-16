@@ -31,7 +31,11 @@ class Session {
         self::start();
         return isset($_SESSION[$key]) ? $_SESSION[$key] : $default;
     }
-
+    // Получение всех значений
+    public static function getAll() {
+        self::start();
+        return isset($_SESSION) ? $_SESSION : null;
+    }
     // Удаление значения
     public static function remove($key) {
         self::start();
