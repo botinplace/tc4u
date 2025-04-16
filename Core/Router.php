@@ -94,7 +94,7 @@ class Router
         
          if (!in_array($method, $this->allowedMethods)) {                
                 $this->response->setHeader('HTTP/1.1 405 Method Not Allowed');
-                $this->send();
+                $this->response->send();
                 return;
             }
 
@@ -143,7 +143,7 @@ class Router
                 // Перенаправление для обычного запроса
                 $this->response->setHeader('location', AUTH_PATH );
             }
-            $this->send();
+            $this->response->send();
         }
 
         [$class, $function] = $this->resolveController($route);
