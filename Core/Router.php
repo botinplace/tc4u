@@ -188,7 +188,8 @@ class Router
 
     private function isUserAuthenticated(): bool
     {
-        return isset( Session::get('user') );
+	$user = Session::get('user');
+        return isset( $user );
     }
 
     private function toArray(): array
