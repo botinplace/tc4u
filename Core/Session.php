@@ -27,9 +27,9 @@ class Session {
     }
 
     // Получение значения
-    public static function get($key) {
+    public static function get($key,$default=null) {
         self::start();
-        return isset($_SESSION[$key]) ? $_SESSION[$key] : null;
+        return isset($_SESSION[$key]) ? $_SESSION[$key] : $default;
     }
 
     // Удаление значения
