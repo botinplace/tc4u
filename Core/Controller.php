@@ -3,6 +3,7 @@ namespace Core;
 
 use Core\Response;
 use Core\Request;
+use Core\Session;
 use Core\TemplateEngine;
 
 class Controller
@@ -36,6 +37,12 @@ class Controller
                 (bool) Request::get("GetMainContentOnly"))
                 ? true
                 : false;
+    }
+
+// Вынести
+    private function isUserAuthenticated(): bool
+    {
+        return Session::get('user') !== null;
     }
 
     // тут лучше убрать в шаблон {{ includeCSS('filename' or ['filename1','filename2']) }}
