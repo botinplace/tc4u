@@ -78,7 +78,8 @@ class Router
                     $data["controller"],
                     $data["needauth"] ?? false,
                     // добавить $data["onlyforguest"] ?? false,
-                    $key
+                    $key,
+		    $data["middlewares"] ?? [],
                 );
                   //$this->routes[$method][$routeData["path"]] = $route;
                  $this->routes[$method][] = $route;
