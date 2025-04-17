@@ -149,7 +149,7 @@ class Router
                 continue;
             }
             
-            $result = $middlewareInstance->handle($params , $pagedata);
+            $result = $middlewareInstance->handle($params , $this->pageData);
             
             if ($result === false) {            
                 return false;
