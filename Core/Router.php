@@ -28,10 +28,7 @@ class Router
 
     private function setAllowedMethods()
     {
-        if (!empty(ALLOWED_METHODS)) {
-            //$this->allowedMethods = array_map('trim', explode(',', ALLOWED_METHODS));
-	    $this->allowedMethods = array_map('trim', Config::get('app.allowed_methods') );
-        }
+           $this->allowedMethods = array_map('trim', Config::get('app.allowed_methods', $this->allowedMethods ) );
     }
     private function loadRoutesFromCache()
     {
