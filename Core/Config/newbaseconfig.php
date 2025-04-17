@@ -1,4 +1,5 @@
 <?php
+// MainApp/Config/config.php
 return [
     'app' => [
         'name' => 'Название Проекта',
@@ -19,7 +20,7 @@ return [
                 'pass' => env('DB_PASS'),
             ],
             'mysql' => [
-			    'host' => env('DB_HOST'),
+		'host' => env('DB_HOST'),
                 'name' => env('DB_NAME'),
                 'user' => env('DB_USER'),
                 'pass' => env('DB_PASS'),
@@ -37,10 +38,6 @@ return [
     
     // Middleware по умолчанию
     'middleware' => [
-        [ 
-			'Core\Middleware\MiddlewareClass1',
-			'MainApp\Middleware\MiddlewareClass2',
-			'MainApp\Middleware\MiddlewareClass3'
-		],
+			\MainApp\Middleware\AuthViewMiddleware::class
     ],
 ];
