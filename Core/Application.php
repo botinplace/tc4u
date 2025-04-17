@@ -18,7 +18,7 @@ class Application
     public function __construct()
     {
         // Загрузка конфигурации
-        $this->config = Config::loadConfig(APP . "Config/config.php");
+        $this->config = Config::loadConfig(APP . "Config/config.php");        
         $this->router = new Router();
     }
 
