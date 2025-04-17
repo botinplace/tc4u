@@ -125,7 +125,7 @@ private function loadPageData($pagename = ''): array
 
         $this->pagedata["content"] = $this->content;
 
-        if (!file_exists(TEMPLATES . "/" . $this->baseTemplate . ".php")) {
+        if (!file_exists(TEMPLATES . $this->baseTemplate . ".php")) {
             return $this->handleTemplateNotFound();
         }
 
@@ -146,7 +146,7 @@ private function loadPageData($pagename = ''): array
         if ($this->get_main_block_only && $this->xmlhttprequest) {
             return $this->renderMainBlock();
         } else {
-            include TEMPLATES . "/" . $this->baseTemplate . ".php";
+            include TEMPLATES .  $this->baseTemplate . ".php";
         }
 
         $this->response->setHtmlBody(
