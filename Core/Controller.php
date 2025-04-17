@@ -85,7 +85,7 @@ class Controller
 
 private function loadPageData($pagename = ''): array
 {
-    $filePath = APP . "Config/pagedata.php";
+    $filePath = CONFIG_DIR. "pagedata.php";
 
     if (!file_exists($filePath)) {
 		trigger_error("Ошибка: файл не найден - $filePath", E_USER_WARNING);
