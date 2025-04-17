@@ -2,13 +2,14 @@
 
 namespace Core\Database;
 
+use Core\Config\Config;
 use Core\Database\DatabaseInterface;
 use \PDO;
 
 class PostgreSQL implements DatabaseInterface{
-    private static $dsn = "pgsql:host=" . POSTGRESQL_HOST . ";port=5432;dbname=" . POSTGRESQL_NAME . "; options='--client_encoding=UTF8'";
-    private static $user = POSTGRESQL_USER;
-    private static $pass = POSTGRESQL_PASS;
+    private static $dsn = "pgsql:host=" . Config::get('database.connections.pgsql.host') . ";port=5432;dbname=" . Config::get('database.connections.pgsql.name') . "; options='--client_encoding=UTF8'";
+    private static $user = Config::get('database.connections.pgsql.user');
+    private static $pass = Config::get('database.connections.pgsql.pass');
     private static $dbh = null;
 
     private static function getDbh()
