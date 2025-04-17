@@ -6,14 +6,14 @@ class Config {
 
     public static function load(): void {
         // Основной файл
-        self::$config = require APP . 'config.php';
+        self::$config = require CONFIG_DIR . 'config.php';
 		if (!self::$config) {
 			throw new \Exception("Config not loaded properly");
 		}
 
         // Локальные переопределения
-        if (file_exists(APP . 'config.local.php')) {
-            self::$config = array_merge(self::$config, require APP . 'config.local.php');
+        if (file_exists(CONFIG_DIR . 'config.local.php')) {
+            self::$config = array_merge(self::$config, require CONFIG_DIR . 'config.local.php');
         }
 
         self::validateConfig();
