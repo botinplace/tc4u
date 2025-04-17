@@ -5,6 +5,8 @@ namespace Core\Database;
 use Core\Config\Config;
 use Core\Database\DatabaseInterface;
 use \PDO;
+use \PDOException;
+use \Exception;
 
 class PostgreSQL implements DatabaseInterface{
     private static $dsn = "pgsql:host=" . Config::get('database.connections.pgsql.host') . ";port=5432;dbname=" . Config::get('database.connections.pgsql.name') . "; options='--client_encoding=UTF8'";
@@ -12,8 +14,15 @@ class PostgreSQL implements DatabaseInterface{
     private static $pass = Config::get('database.connections.pgsql.pass');
     private static $dbh = null;
 
+    private static function initialize()
+    {
+        self::$dsn = "pgsql:host=" . Config::get('database.connections.pgsql.host') . ";port=5432;dbname=" . Config::get('database.connections.pgsql.name') . "; options='--client_encoding=UTF8'";
+        self::$user = Config::get('database.connections.pgsql.user');
+        self::$pass = Config::get('database.connections.pgsql.pass');
+    }
     private static function getDbh()
     {
+        self::initialize();
         if (!self::$dbh) {
             try {
                 self::$dbh = new PDO(self::$dsn, self::$user, self::$pass);
