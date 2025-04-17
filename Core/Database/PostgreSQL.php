@@ -9,9 +9,9 @@ use \PDOException;
 use \Exception;
 
 class PostgreSQL implements DatabaseInterface{
-    private static $dsn = "pgsql:host=" . Config::get('database.connections.pgsql.host') . ";port=5432;dbname=" . Config::get('database.connections.pgsql.name') . "; options='--client_encoding=UTF8'";
-    private static $user = Config::get('database.connections.pgsql.user');
-    private static $pass = Config::get('database.connections.pgsql.pass');
+    private static $dsn;
+    private static $user;
+    private static $pass;
     private static $dbh = null;
 
     private static function initialize()
