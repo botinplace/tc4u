@@ -16,6 +16,11 @@ class Config {
             self::$config = array_merge(self::$config, require CONFIG_DIR . 'config.local.php');
         }
 
+	    $fixed_url = !empty( self::get('uri_fixer') ) ? self::get('uri_fixer').(!empty(BASE_URL) ? '/' : '') : '').BASE_URL;
+	    [ 'app' => [ 'fixed_url' => '' ] ];
+
+	app ('FIXED_URL', (  !empty(URI_FIXER) ? URI_FIXER.(!empty(BASE_URL) ? '/' : '') : '').BASE_URL );
+	    
         self::validateConfig();
     }
 
