@@ -92,7 +92,8 @@ class Router
         $method = strtoupper( Request::method() );
         
          if (!in_array($method, $this->allowedMethods)) {                
-                $this->response->setHeader('HTTP/1.1 405 Method Not Allowed');
+                //$this->response->setHeader('HTTP/1.1 405 Method Not Allowed');
+		 $this->response->setStatusCode(405);
                 $this->response->send();
                 return;
             }
