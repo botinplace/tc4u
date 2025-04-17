@@ -17,10 +17,8 @@ class Config {
         }
 
 	    $fixed_url = !empty( self::get('uri_fixer') ) ? self::get('uri_fixer').(!empty(BASE_URL) ? '/' : '') : '').BASE_URL;
-	    [ 'app' => [ 'fixed_url' => '' ] ];
-
-	app ('FIXED_URL', (  !empty(URI_FIXER) ? URI_FIXER.(!empty(BASE_URL) ? '/' : '') : '').BASE_URL );
-	    
+	    self::$config = array_merge(self::$config,  [ 'app' => [ 'fixed_url' => $fixed_url ] ] );	   
+    
         self::validateConfig();
     }
 
