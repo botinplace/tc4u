@@ -38,8 +38,9 @@ class Application
         $path = explode("?", $path, 2)[0];
 
         // Удаление лишнего (например /admin/)
-        if (defined('URI_FIXER') && URI_FIXER !== "") {
-            $path = preg_replace("/^" . preg_quote(URI_FIXER, "/") . '(\/|$)/', "/", $path);
+        $uri_fixer = Config::get('app.uri_fixer');
+        if ($uri_fixer && $uri_fixer !== "") {
+            $path = preg_replace("/^" . preg_quote( $uri_fixer , "/") . '(\/|$)/', "/", $path);
         }
 
         if (defined('BASE_URL') && BASE_URL !== "") {
