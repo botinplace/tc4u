@@ -17,8 +17,8 @@ class Router
 
     public function __construct()
     {
-        $this->routesFile = APP . "Config/routes.php";
-        $this->cacheFile = APP . "cache/cachroutes.php";
+        $this->routesFile = APP_DIR . "Config/routes.php";
+        $this->cacheFile = APP_DIR . "cache/cachroutes.php";
         $this->cache = new Cache($this->cacheFile, $this->routesFile);
         $this->response = new Response();
         $this->setAllowedMethods();
