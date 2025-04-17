@@ -136,7 +136,6 @@ class Router
   private function processMiddlewares(array $middlewares, array $params, array &$pagedata): bool
     {
 	$middlewares = array_merge($this->defaultMiddlewares,$middlewares);
-	var_dump($middlewares);
         foreach ($middlewares as $middleware) {
             if (!class_exists($middleware)) {
                 error_log("Middleware class {$middleware} не найден");
