@@ -163,10 +163,10 @@ class Router
 
             if ( Request::isAjax() ) {
                 // Возврат JSON ответа для AJAX-запроса
-                $this->response->setJson( ['error' => 'Unauthorized', 'redirect' => AUTH_PATH ] );
+                $this->response->setJson( ['error' => 'Unauthorized', 'redirect' => Config::get('app.auth_path') ] );
             } else {
                 // Перенаправление для обычного запроса
-                $this->response->setHeader('location', AUTH_PATH );
+                $this->response->setHeader('location', Config::get('app.auth_path') );
             }
             $this->response->send();
         }
