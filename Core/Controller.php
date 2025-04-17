@@ -137,6 +137,7 @@ private function loadPageData($pagename = ''): array
         $extra_vars["this_project_version"] = "v.1.0.0";
         $extra_vars["SITE_URI"] = Config::get('app.fixed_uri');
 	$extra_vars["isUserAuthenticated"] = $this->isUserAuthenticated();
+	$extra_vars["user"] = isset($extra_vars['auth']['user']) ? $extra_vars['auth']['user'] : (isset($auth['user']) ? $auth['user'] : [] );
 	//pagetitle 
 	$extra_vars['pagetitle'] = isset($extra_vars['pagetitle']) ? $extra_vars['pagetitle'] : (isset($pagetitle) ? $pagetitle : '' );
 
