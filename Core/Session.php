@@ -21,8 +21,9 @@ class Session {
             'use_strict_mode' => true,
             'use_only_cookies' => 1,
             'cache_limiter' => 'nocache',
-            'sid_length' => 128,
-            'sid_bits_per_character' => 6
+            //Устаревшие параметры (с 8.1 ):
+            //'sid_length' => 128,
+            //'sid_bits_per_character' => 6
         ];
 
         session_start(array_merge($defaultOptions, $options));
