@@ -11,7 +11,7 @@ class Session {
         }
 
         $defaultOptions = [
-            'name' => 'secure_sid',
+            //'name' => 'secure_sid',
             'cookie_lifetime' => 86400, // 1 день
             'cookie_path' => '/',
             'cookie_domain' => $_SERVER['HTTP_HOST'] ?? '',
