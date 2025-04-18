@@ -171,9 +171,7 @@ class PostgreSQLNew2 implements DatabaseInterface {
         $this->close();
     }
 
-    /**
-     * Проверяет существование таблицы в базе данных
-     */
+     // Проверка существования таблицы в базе данных
     public function tableExists(string $tableName): bool {
         $query = "SELECT EXISTS (
             SELECT FROM information_schema.tables 
