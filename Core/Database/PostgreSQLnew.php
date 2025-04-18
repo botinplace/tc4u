@@ -87,9 +87,25 @@ class PostgreSQLNew implements DatabaseInterface {
         return $this->dbh->lastInsertId();
     }
 
+    // Вставка с возвратом всех ID (для массовых вставок)
+    public function insertWithReturn(string $query, array $params = []): array {
+        if (!preg_match('/RETURNING/i', $query)) {
+            $query .= " RETURNING id";
+        }
+        return $this->execute($query, $params)->fetchAll(PDO::FETCH_COLUMN);
+    }
+
     public function update(string $query, array $params = []): int {
         $sth = $this->execute($query, $params);
         return $sth->rowCount();
+    }
+
+    // Обновление с возвратом ID изменённых строк
+    public function updateWithReturn(string $query, array $params = [], string $returnColumn = 'id'): array {
+        if (!preg_match('/RETURNING/i', $query)) {
+            $query .= " RETURNING $returnColumn";
+        }
+        return $this->execute($query, $params)->fetchAll(PDO::FETCH_COLUMN);
     }
 
     public function selectRow(string $query, array $params = []): ?array {
