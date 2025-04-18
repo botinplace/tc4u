@@ -7,11 +7,11 @@ class DatabaseFactory {
             case 'pgsql':
                 return new PostgreSQL();
             case 'mysql':
-                return new Mysql();
+                return new MySQL();
             case 'mssql':
-                return new Mssql();
-            case 'sqli':
-                return new SQLi();
+                return new MsSQL();
+            case 'sqlite':
+                return new SQLite();
             case 'nodb':
                 return new NoDB();
             default:
