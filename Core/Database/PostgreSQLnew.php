@@ -39,7 +39,8 @@ class PostgreSQLNew implements DatabaseInterface {
                     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                     PDO::ATTR_EMULATE_PREPARES => false,
-                    PDO::ATTR_PERSISTENT => true // Для постоянного соединения
+                    PDO::ATTR_PERSISTENT => true, // Для постоянного соединения
+                    PDO::ATTR_STRINGIFY_FETCHES => false // Для корректной работы с числами
                 ]
             );
         } catch (PDOException $e) {
@@ -74,11 +75,30 @@ class PostgreSQLNew implements DatabaseInterface {
     public function execute(string $query, array $params = []): \PDOStatement {
         try {
             $sth = $this->dbh->prepare($query);
-            $sth->execute($params);
+            
+            // Привязка параметров с учетом типа
+            foreach ($params as $key => $value) {
+                $paramType = PDO::PARAM_STR;
+                if (is_int($value)) {
+                    $paramType = PDO::PARAM_INT;
+                } elseif (is_bool($value)) {
+                    $paramType = PDO::PARAM_BOOL;
+                } elseif (is_null($value)) {
+                    $paramType = PDO::PARAM_NULL;
+                }
+                
+                $sth->bindValue(
+                    is_int($key) ? $key + 1 : $key,
+                    $value,
+                    $paramType
+                );
+            }
+            
+            $sth->execute();
             return $sth;
         } catch (PDOException $e) {
             throw new Exception('Query execution failed: ' . $e->getMessage() . 
-                              ' [Query: ' . $query . ']');
+                              ' [Query: ' . $query . ']', (int)$e->getCode());
         }
     }
 
@@ -88,9 +108,9 @@ class PostgreSQLNew implements DatabaseInterface {
     }
 
     // Вставка с возвратом всех ID (для массовых вставок)
-    public function insertWithReturn(string $query, array $params = []): array {
+    public function insertWithReturn(string $query, array $params = [], string $returnColumn = 'id'): array {
         if (!preg_match('/RETURNING/i', $query)) {
-            $query .= " RETURNING id";
+            $query .= " RETURNING $returnColumn";
         }
         return $this->execute($query, $params)->fetchAll(PDO::FETCH_COLUMN);
     }
@@ -102,6 +122,19 @@ class PostgreSQLNew implements DatabaseInterface {
 
     // Обновление с возвратом ID изменённых строк
     public function updateWithReturn(string $query, array $params = [], string $returnColumn = 'id'): array {
+        if (!preg_match('/RETURNING/i', $query)) {
+            $query .= " RETURNING $returnColumn";
+        }
+        return $this->execute($query, $params)->fetchAll(PDO::FETCH_COLUMN);
+    }
+    
+    public function delete(string $query, array $params = []): int {
+        $sth = $this->execute($query, $params);
+        return $sth->rowCount();
+    }
+
+    // Удаление с возвратом ID удалённых строк
+    public function deleteWithReturn(string $query, array $params = [], string $returnColumn = 'id'): array {
         if (!preg_match('/RETURNING/i', $query)) {
             $query .= " RETURNING $returnColumn";
         }
@@ -127,6 +160,9 @@ class PostgreSQLNew implements DatabaseInterface {
     }
 
     public function close(): void {
+        if ($this->dbh !== null && $this->dbh->inTransaction()) {
+            $this->dbh->rollBack();
+        }
         $this->dbh = null;
         self::$instance = null;
     }
@@ -136,5 +172,15 @@ class PostgreSQLNew implements DatabaseInterface {
             $this->rollback();
         }
         $this->close();
+    }
+
+    // Проверка существования таблицы
+    public function tableExists(string $tableName): bool {
+        $query = "SELECT EXISTS (
+            SELECT FROM information_schema.tables 
+            WHERE table_schema = 'public' 
+            AND table_name = :table
+        )";
+        return (bool)$this->selectValue($query, [':table' => $tableName]);
     }
 }
