@@ -8,7 +8,7 @@ use PDO;
 use PDOException;
 use Exception;
 
-class PostgreSQLNew2 implements DatabaseInterface {
+class PostgreSQL implements DatabaseInterface {
     private static $instance = null;
     private $dbh = null;
     private $transactionLevel = 0;
