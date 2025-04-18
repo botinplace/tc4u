@@ -148,7 +148,7 @@ class Session {
     private static function ensureStarted(): void {
         if (!self::$isStarted) {
             //throw new \RuntimeException('Session not started');
-            self::start([]);
+            self::start();
         }
     }
 }
