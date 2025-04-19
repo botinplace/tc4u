@@ -21,7 +21,7 @@ composer install --ignore-platform-reqs
 │   └── [Конфигурационные файлы и классы для загрузки конфигурации]
 │
 ├── /Database
-│   └── [Классы для работы с базами данных, например, ClassPostgre.php, DatabaseFactory.php ,DatabaseInterface.php]
+│   └── [Классы для работы с базами данных, например, PostgreSQL.php, DatabaseFactory.php ,DatabaseInterface.php]
 │
 ├── /Middlewares
 │   └── [Папка для хранения различных промежуточных обработчиков запросов]
@@ -62,44 +62,49 @@ composer install --ignore-platform-reqs
 
 ## config.php format
 ```php
-<?php
-//
-define('URI_FIXER', '');
-
-define('POSTGRESQL_HOST', 'localhost');
-define('POSTGRESQL_NAME', 'name');
-define('POSTGRESQL_USER', 'user');
-define('POSTGRESQL_PASS', 'password');
-
-define('MYSQL_HOST', 'localhost');
-define('MYSQL_NAME', 'name');
-define('MYSQL_USER', 'user');
-define('MYSQL_PASS', 'password');
-
-define('SQLi_PATH',  dirname( ROOT.'core/app/config.php' ).'/ClassSQLi/SQLi_DB/' );
-define('SQLi_NAME', 'site.db');
-define('SQLi_USER', 'user');
-define('SQLi_PASS', 'password');
-
-// Адрес АД
-define( 'AD_SERVER_IP', '255.255.255.255' );
-define( 'AD_SERVER_IP2', '255.255.255.255' );
-define( 'AD_DOMAIN', 'domain1' );
-define( 'AD_DOMAIN2', 'domain2' );
-
-// Доступные методы
-define( 'ALLOWED_METHODS', 'GET,POST,PUT,DELETE,OPTIONS,HEAD' );
-
-// Default needauth / onlyforguest
-
-// Страница авторизации (если пользователь не авторизован)
-define('AUTH_PATH','/auth');
-
-// project_db=> Mssql Mysql Postgre SQLi NoDB
-return (object) array(
-	'defaultMiddlewares'=>[ ['Middleware','Method'] ],
-    'project_db' => 'Postgre'
-);
+return [
+    'app' => [
+        'name' => 'Название Проекта',
+        'env' => 'production',
+        'uri_fixer' => '',
+        'allowed_methods' => explode(',', env('ALLOWED_METHODS', 'GET,POST')),
+        'auth_path' => env('AUTH_PATH', '/auth'),
+    ],
+    
+    'database' => [
+        'default' => env('DB_DRIVER', 'pgsql'),
+		
+        'connections' => [
+            'pgsql' => [
+                'host' => env('DB_HOST'),
+                'name' => env('DB_NAME'),
+                'user' => env('DB_USER'),
+                'pass' => env('DB_PASS'),
+            ],
+            'mysql' => [
+		'host' => env('DB_HOST'),
+                'name' => env('DB_NAME'),
+                'user' => env('DB_USER'),
+                'pass' => env('DB_PASS'),
+			],
+        ],
+    ],
+    
+    // Active Directory
+    'active_directory' => [
+        'servers' => [
+            ['ip' => env('AD_SERVER_1'), 'domain' => env('AD_DOMAIN_1')],
+            ['ip' => env('AD_SERVER_2'), 'domain' => env('AD_DOMAIN_2')],
+        ],
+    ],
+    
+    // Middleware по умолчанию
+    'middleware' => [
+	\MainApp\Middleware\MiddlewareClass1::class,
+	\MainApp\Middleware\MiddlewareClass2::class,
+	\MainApp\Middleware\MiddlewareClass3::class
+    ],
+];
 ```
 
 ## routes.php format
