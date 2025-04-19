@@ -52,6 +52,7 @@ composer install --ignore-platform-reqs
     - **Content/**
     - **Controllers/**
     - **Models/**
+    - **Middlewares/**
     - **Repositories/**
     - **Templates/**
        - **base.php**
