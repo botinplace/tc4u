@@ -54,6 +54,18 @@ class Application
     {
         http_response_code(500);        
         //echo "Ошибка: " . htmlspecialchars($e->getMessage(), ENT_QUOTES, "UTF-8");
+
+    $errorMessage = sprintf(
+        "[%s] Ошибка 500: %s в файле %s на строке %d\nStack trace:\n%s",
+        date('Y-m-d H:i:s'),
+        $e->getMessage(),
+        $e->getFile(),
+        $e->getLine(),
+        $e->getTraceAsString()
+    );
+    
+    error_log($errorMessage);
+
     }
 
     public function run()
