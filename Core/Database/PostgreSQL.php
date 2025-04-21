@@ -27,7 +27,7 @@ class PostgreSQL implements DatabaseInterface {
 
     private function connect(): void {
         $dsn = "pgsql:host=" . Config::get('database.connections.pgsql.host') . 
-               ";port=".Config::get('database.connections.pgsql.host',5432).";dbname=" . Config::get('database.connections.pgsql.name') . 
+               ";port=".Config::get('database.connections.pgsql.port',5432).";dbname=" . Config::get('database.connections.pgsql.name') . 
                ";options='--client_encoding=UTF8'";
         
         try {
