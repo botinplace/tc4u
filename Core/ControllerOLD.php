@@ -7,7 +7,7 @@ use Core\Request;
 use Core\Session;
 use Core\TemplateEngine;
 
-class Controller
+class ControllerOLD
 {
     public $baseTemplate = "base";
     public $contentFile = "";
