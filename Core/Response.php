@@ -58,7 +58,7 @@ class Response {
         }
     }
 
-    public function setHtmlBody(string $html, bool $escape = true): self {
+    public function setHtmlBody(string $html, bool $escape = false): self {
         $this->body = $escape ? htmlspecialchars($html, ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5, 'UTF-8') : $html;
         return $this->setHeader('Content-Type', 'text/html; charset=utf-8');
     }
