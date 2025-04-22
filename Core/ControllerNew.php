@@ -7,7 +7,7 @@ use Core\ResponseNew;
 use Core\Session;
 use Core\TemplateEngine;
 
-class ControllerNew
+class Controller
 {
     public $baseTemplate = "base";
     public $contentFile = "";
