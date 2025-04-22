@@ -40,49 +40,56 @@ class Controller
                 : false;
     }
 
-    public function render(array $extra_vars = []): void
-    {
-        ob_end_clean(); // Очистка всех буферов вывода
-
-        if (!$this->page_not_found) {
-            $this->setCacheHeaders();
+public function render(array $extra_vars = []): void
+{
+    try {
+        if (ob_get_level() > 0) {
+            ob_end_clean();
         }
-
-        $this->pagedata["content"] = $this->content;
-
-        if (!file_exists(TEMPLATES . $this->baseTemplate . ".php")) {
-            $this->handleTemplateNotFound();
-            return;
-        }
-
-        $this->handleAjaxRequest($extra_vars);
-
-        // Подготовка данных для шаблона
-        $extra_vars = array_merge([
-            "this_project_version" => "v.1.0.0",
-            "SITE_URI" => Config::get('app.fixed_uri'),
-            "isUserAuthenticated" => $this->isUserAuthenticated(),
-            "user" => $extra_vars['auth']['user'] ?? [],
-            "pagetitle" => $extra_vars['pagetitle'] ?? ($this->pagedata['pagetitle'] ?? '')
-        ], $extra_vars);
-
-        extract($this->pagedata);
-        
-        $this->templateEngine = new TemplateEngine($extra_vars);
-        
-        if ($this->get_main_block_only && $this->xmlhttprequest) {
-            $this->renderMainBlock();
-            return;
-        }
-
-        ob_start();
-        include TEMPLATES . $this->baseTemplate . ".php";
-        $content = ob_get_clean();
-
-        $this->response
-            ->setHtmlBody($this->templateEngine->render($content))
-            ->send();
+    } catch (\Throwable $e) {
+        error_log('Ошибка очистки буфера: ' . $e->getMessage());        
+        // throw $e;
     }
+
+    if (!$this->page_not_found) {
+        $this->setCacheHeaders();
+    }
+
+    $this->pagedata["content"] = $this->content;
+
+    if (!file_exists(TEMPLATES . $this->baseTemplate . ".php")) {
+        $this->handleTemplateNotFound();
+        return;
+    }
+
+    $this->handleAjaxRequest($extra_vars);
+
+    // Подготовка данных для шаблона
+    $extra_vars = array_merge([
+        "this_project_version" => "v.1.0.0",
+        "SITE_URI" => Config::get('app.fixed_uri'),
+        "isUserAuthenticated" => $this->isUserAuthenticated(),
+        "user" => $extra_vars['auth']['user'] ?? [],
+        "pagetitle" => $extra_vars['pagetitle'] ?? ($this->pagedata['pagetitle'] ?? '')
+    ], $extra_vars);
+
+    extract($this->pagedata);
+    
+    $this->templateEngine = new TemplateEngine($extra_vars);
+    
+    if ($this->get_main_block_only && $this->xmlhttprequest) {
+        $this->renderMainBlock();
+        return;
+    }
+
+    ob_start();
+    include TEMPLATES . $this->baseTemplate . ".php";
+    $content = ob_get_clean();
+
+    $this->response
+        ->setHtmlBody($this->templateEngine->render($content))
+        ->send();
+}
 
     public function handleNotFound(): void
     {
