@@ -6,39 +6,39 @@ class Request
     private static ?array $parsedBody = null;
 
     // Получение данных с фильтрацией
-    public static function get(string $key, $default = null, int $filter = FILTER_DEFAULT, $options = null)
+    public static function get(string $key, mixed $default = null, int $filter = FILTER_DEFAULT, array|int|null $options = null): mixed
     {
-        return filter_input(INPUT_GET, $key, $filter, $options) ?? $default;
+        return filter_input(INPUT_GET, $key, $filter, $options ?? 0) ?? $default;
     }
 
-    public static function post(string $key, $default = null, int $filter = FILTER_DEFAULT, $options = null)
+    public static function post(string $key, mixed $default = null, int $filter = FILTER_DEFAULT, array|int|null $options = null): mixed
     {
-        return filter_input(INPUT_POST, $key, $filter, $options) ?? $default;
+        return filter_input(INPUT_POST, $key, $filter, $options ?? 0) ?? $default;
     }
 
     // Получение всех данных с фильтрацией
-    public static function getAll(int $filter = FILTER_DEFAULT, $options = null): array
+    public static function getAll(int $filter = FILTER_DEFAULT, array|int|null $options = null): array
     {
         return filter_input_array(INPUT_GET, [
-            '*' => ['filter' => $filter, 'options' => $options]
+            '*' => ['filter' => $filter, 'options' => $options ?? []]
         ]) ?? [];
     }
 
-    public static function postAll(int $filter = FILTER_DEFAULT, $options = null): array
+    public static function postAll(int $filter = FILTER_DEFAULT, array|int|null $options = null): array
     {
         return filter_input_array(INPUT_POST, [
-            '*' => ['filter' => $filter, 'options' => $options]
+            '*' => ['filter' => $filter, 'options' => $options ?? []]
         ]) ?? [];
     }
 
     // Получение данных из любого источника (GET/POST)
-    public static function input(string $key, $default = null, int $filter = FILTER_DEFAULT, $options = null)
+    public static function input(string $key, mixed $default = null, int $filter = FILTER_DEFAULT, array|int|null $options = null): mixed
     {
         return self::post($key, self::get($key, $default, $filter, $options), $filter, $options);
     }
 
     // Улучшенная обработка JSON
-    public static function json(string $key = null, $default = null)
+    public static function json(?string $key = null, mixed $default = null): mixed
     {
         if (self::$parsedBody === null) {
             $input = file_get_contents('php://input');
@@ -57,7 +57,7 @@ class Request
     }
 
     // Получение файлов с обработкой
-    public static function files(string $key = null)
+    public static function files(?string $key = null): mixed
     {
         if ($key === null) {
             return $_FILES;
