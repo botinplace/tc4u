@@ -69,11 +69,14 @@ public function render(array $extra_vars = []): void
         "this_project_version" => "v.1.0.0",
         "SITE_URI" => Config::get('app.fixed_uri'),
         "isUserAuthenticated" => $this->isUserAuthenticated(),
-        "user" => $extra_vars['auth']['user'] ?? [],
+        "user" => isset($extra_vars['auth']['user']) ? $extra_vars['auth']['user'] : (isset($this->pagedata['auth']['user']) ? $this->pagedata['auth']['user'] : [] ),
         "pagetitle" => $extra_vars['pagetitle'] ?? ($this->pagedata['pagetitle'] ?? '')
     ], $extra_vars);
+    
 
-    extract($this->pagedata);
+    // Объединяем pagedata и extra_vars в один массив для шаблона
+    $templateData = array_merge($this->pagedata, $extra_vars);
+    //extract($this->pagedata);
     
     $this->templateEngine = new TemplateEngine($extra_vars);
     
@@ -82,14 +85,30 @@ public function render(array $extra_vars = []): void
         return;
     }
 
-    ob_start();
-    include TEMPLATES . $this->baseTemplate . ".php";
-    $content = ob_get_clean();
+    $content = $this->renderTemplate($this->baseTemplate, $templateData);
 
     $this->response
         ->setHtmlBody($this->templateEngine->render($content))
         ->send();
 }
+
+    protected function renderTemplate(string $template, array $data = []): string
+    {
+        $templatePath = TEMPLATES . $template . ".php";
+        if (!file_exists($templatePath)) {
+            throw new \RuntimeException("Template file not found: {$templatePath}");
+        }
+    
+        ob_start();
+        try {
+            extract($data, EXTR_SKIP);
+            include $templatePath;
+        } catch (\Throwable $e) {
+            ob_end_clean();
+            throw new \RuntimeException("Error rendering template {$template}: " . $e->getMessage(), 0, $e);
+        }
+        return ob_get_clean();
+    }
 
     public function handleNotFound(): void
     {
