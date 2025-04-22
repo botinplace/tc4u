@@ -64,14 +64,11 @@ public function render(array $extra_vars = []): void
 
     $this->handleAjaxRequest($extra_vars);
 
-    // Подготовка данных для шаблона
-    $extra_vars = array_merge([
-        "this_project_version" => "v.1.0.0",
-        "SITE_URI" => Config::get('app.fixed_uri'),
-        "isUserAuthenticated" => $this->isUserAuthenticated(),
-        "user" => isset($extra_vars['auth']['user']) ? $extra_vars['auth']['user'] : (isset($this->pagedata['auth']['user']) ? $this->pagedata['auth']['user'] : [] ),
-        "pagetitle" => $extra_vars['pagetitle'] ?? ($this->pagedata['pagetitle'] ?? '')
-    ], $extra_vars);
+    $extra_vars["this_project_version"] = "v.1.0.0";
+    $extra_vars["SITE_URI"] = Config::get('app.fixed_uri');
+    $extra_vars["isUserAuthenticated"] = $this->isUserAuthenticated();
+    $extra_vars["user"] = isset($extra_vars['auth']['user']) ? $extra_vars['auth']['user'] : (isset( $this->pagedata['auth']['user'] ) ? $this->pagedata['auth']['user'] : [] );
+    $extra_vars['pagetitle'] = isset($extra_vars['pagetitle']) ? $extra_vars['pagetitle'] : (isset($this->pagedata['pagetitle']) ? $this->pagedata['pagetitle'] : '' );
     
 
     // Объединяем pagedata и extra_vars в один массив для шаблона
