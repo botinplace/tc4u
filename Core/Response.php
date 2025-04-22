@@ -90,11 +90,12 @@ class Response {
     }
 
     public function redirect(string $url, int $statusCode = 302): self {
-        if (!filter_var($url, FILTER_VALIDATE_URL)) {
+        
+        if (!filter_var($url, FILTER_VALIDATE_URL) && !preg_match('~^/([a-z0-9-._~%!$&\'()*+,;=:@/]*)$~i', $url)) {
             $this->logError('Invalid redirect URL: ' . $url);
             throw new \InvalidArgumentException('Invalid redirect URL');
         }
-
+    
         if (Request::isAjax()) {
             return $this->setStatusCode(200)
                 ->setJsonBody([
@@ -102,11 +103,11 @@ class Response {
                     'status' => $statusCode
                 ]);
         }
-    
+        
         return $this->setStatusCode($statusCode)
                    ->setHeader('Location', $url)
                    ->setBody('');
-        }
+    }
 
     public function setBody($body): self {
         $this->body = $body;
