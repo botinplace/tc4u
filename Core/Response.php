@@ -68,19 +68,20 @@ class Response {
         return $this->setHeader('Content-Type', 'text/plain; charset=utf-8');
     }
 
-    public function setFile(string $filePath, string $contentType = null, int $chunkSize = 8192): self {
+    public function setFile(string $filePath, ?string $contentType = null, int $chunkSize = 8192): self
+    {
         if (!file_exists($filePath) || !is_readable($filePath)) {
             $this->logError('File not accessible: ' . $filePath);
             throw new \RuntimeException("File not found or not readable");
         }
-
+    
         $contentType = $contentType ?? $this->detectMimeType($filePath);
         $fileSize = filesize($filePath);
-
+    
         $this->body = function () use ($filePath, $chunkSize) {
             $this->sendFileChunked($filePath, $chunkSize);
         };
-
+    
         return $this->setHeader('Content-Type', $contentType)
                    ->setHeader('Content-Length', (string) $fileSize)
                    ->setHeader('Accept-Ranges', 'bytes');
