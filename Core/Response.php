@@ -1,6 +1,7 @@
 <?php
 namespace Core;
 
+use Core\Config\Config;
 use Core\Request;
 
 class Response {
@@ -122,7 +123,7 @@ class Response {
                 error_log('Invalid characters in redirect path');
             }
     
-            $redirectUrl = '/' . $path;
+            $redirectUrl = Config::get('app.fixed_uri').'/' . $path;
         }
     
         // Обработка AJAX-запросов
@@ -131,13 +132,13 @@ class Response {
                 ->setJsonBody([
                     'redirect' => $redirectUrl,
                     'status' => $statusCode
-                ]);
+                ])->send();
         }
     
         // Стандартный редирект
         return $this->setStatusCode($statusCode)
                    ->setHeader('Location', $redirectUrl)
-                   ->setBody('');
+                   ->setBody('')->send();
     }
 
     public function setBody($body): self {
