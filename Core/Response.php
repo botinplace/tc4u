@@ -1,7 +1,7 @@
 <?php
 namespace Core;
 
-class ResponseNew {
+class Response {
     private int $statusCode = 200;
     private array $headers = [];
     private $body = null;
