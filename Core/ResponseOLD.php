@@ -1,7 +1,7 @@
 <?php
 namespace Core;
 
-class Response {
+class ResponseOLD {
     private $statusCode = 200;
     private $headers = [];
     private $body;
