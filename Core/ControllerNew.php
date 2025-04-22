@@ -3,7 +3,7 @@ namespace Core;
 
 use Core\Config\Config;
 use Core\Request;
-use Core\ResponseNew;
+use Core\Response;
 use Core\Session;
 use Core\TemplateEngine;
 
