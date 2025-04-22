@@ -164,15 +164,7 @@ class Router
         // Если роут требует авторизации и пользователь не авторизован
         if ($route->needAuth && !$this->isUserAuthenticated()) {
 	    error_log("Попытка несанкционированного доступа к маршруту: " . $route->path);
-
-            if ( Request::isAjax() ) {
-                // Возврат JSON ответа для AJAX-запроса
-                $this->response->setJson( ['error' => 'Unauthorized', 'redirect' => Config::get('app.auth_path') ] );
-            } else {
-                // Перенаправление для обычного запроса
-                $this->response->setHeader('location', Config::get('app.auth_path') );
-            }
-            $this->response->send();
+            $this->response->redirect( Config::get('app.auth_path') );
         }
 
         [$class, $function] = $this->resolveController($route);
