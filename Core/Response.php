@@ -89,23 +89,54 @@ class Response {
                    ->setHeader('Accept-Ranges', 'bytes');
     }
 
-    public function redirect(string $url, int $statusCode = 302): self {
-        
-        if (!filter_var($url, FILTER_VALIDATE_URL) && !preg_match('~^/([a-z0-9-._~%!$&\'()*+,;=:@/]*)$~i', $url)) {
-            $this->logError('Invalid redirect URL: ' . $url);
-            throw new \InvalidArgumentException('Invalid redirect URL');
+    public function redirect(string $path, int $statusCode = 302): self {
+        // Проверка пустого пути
+        if ($path === '') {
+            error_log('Redirect path cannot be empty');
+            //throw new \InvalidArgumentException('Redirect path cannot be empty');
         }
     
+        // Обработка абсолютных URL (http/https)
+        if (filter_var($path, FILTER_VALIDATE_URL)) {
+            $scheme = parse_url($path, PHP_URL_SCHEME);
+            if (!in_array($scheme, ['http', 'https'])) {
+                //throw new \InvalidArgumentException('Only http and https protocols are allowed');
+                error_log('Only http and https protocols are allowed');
+            }
+            $redirectUrl = $path;
+        }
+        // Обработка относительных путей
+        else {
+            // Нормализация пути
+            $path = trim($path, '/');
+            
+            // Защита от directory traversal
+            if (str_contains($path, '..')) {
+                //throw new \InvalidArgumentException('Invalid redirect path');
+                error_log('Invalid redirect path');
+            }
+    
+            // Проверка допустимых символов
+            if (!preg_match('#^[\w\-\.~!\$&\'\(\)\*\+,;=:@/%]+$#', $path)) {
+                //throw new \InvalidArgumentException('Invalid characters in redirect path');
+                error_log('Invalid characters in redirect path');
+            }
+    
+            $redirectUrl = '/' . $path;
+        }
+    
+        // Обработка AJAX-запросов
         if (Request::isAjax()) {
             return $this->setStatusCode(200)
                 ->setJsonBody([
-                    'redirect' => $url,
+                    'redirect' => $redirectUrl,
                     'status' => $statusCode
                 ]);
         }
-        
+    
+        // Стандартный редирект
         return $this->setStatusCode($statusCode)
-                   ->setHeader('Location', $url)
+                   ->setHeader('Location', $redirectUrl)
                    ->setBody('');
     }
 
