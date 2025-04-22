@@ -26,7 +26,7 @@ class Controller
         $routename = isset($pagedata['routename'])?$pagedata['routename']:'';
         $this->pagedata = $this->loadPageData( $routename );
         $this->pagedata = array_merge($pagedata,$this->pagedata);
-        $this->response = new ResponseNew();
+        $this->response = new Response();
         $this->xmlhttprequest = Request::isAjax();
         $this->baseTemplate = isset($this->pagedata["baseTemplate"]) ? trim($this->pagedata["baseTemplate"]) : "base";
         $this->contentFile = isset($this->pagedata["contentFile"]) ? trim($this->pagedata["contentFile"]) : "";
