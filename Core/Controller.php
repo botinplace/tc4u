@@ -94,9 +94,12 @@ public function render(array $extra_vars = []): void
     public function handleNotFound(): void
     {
         $this->response
-            ->setStatusCode(404)
-            ->setHtmlBody($this->loadContent('404'))
-            ->send();
+            ->setStatusCode(404);
+        $this->content = $this->loadContent('404');
+        $this->page_not_found = true;
+        $this->render();
+            //->setHtmlBody($this->loadContent('404'))
+            //->send();
     }
 
     private function handleAjaxRequest($extra_vars): void
