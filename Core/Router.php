@@ -84,7 +84,7 @@ class Router
 		    $data["middlewares"] ?? [],
                 );
                   //$this->routes[$method][$routeData["path"]] = $route;
-                 $this->routes[$method][] = $route;
+                 $this->routes[ $singleMethod ][] = $route;
 		}
              }            
         }
