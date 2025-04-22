@@ -72,8 +72,10 @@ class Router
 
         foreach ($routes as $key=>$routeData) {
              foreach ($routeData['methods'] as $method => $data) {
+		$methods = explode('|', $method);
+		foreach ($methods as $singleMethod) {
                 $route = new Route(                    
-                    $method,
+                    $singleMethod,
                     $routeData["path"],
                     $data["controller"],
                     $data["needauth"] ?? false,
@@ -83,6 +85,7 @@ class Router
                 );
                   //$this->routes[$method][$routeData["path"]] = $route;
                  $this->routes[$method][] = $route;
+		}
              }            
         }
     
