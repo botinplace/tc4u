@@ -21,8 +21,8 @@ class Config {
             self::$config = array_merge(self::$config, require CONFIG_DIR . 'config.local.php');
         }
 
-        $fixed_url = !empty( self::$config['app']['uri_fixer'] ) ? self::$config['app']['uri_fixer'] . (!empty(BASE_URL) ? '/' : '') : BASE_URL;
-        self::$config['app']['fixed_url'] = $fixed_url;
+        $fixed_uri = !empty( self::$config['app']['uri_fixer'] ) ? self::$config['app']['uri_fixer'] . (!empty(BASE_URL) ? '/' : '') : BASE_URL;
+        self::$config['app']['fixed_uri'] = $fixed_uri;
 
         self::validateConfig();
     }
