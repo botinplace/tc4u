@@ -1,6 +1,8 @@
 <?php
 namespace Core;
 
+use Core\Request;
+
 class Response {
     private int $statusCode = 200;
     private array $headers = [];
@@ -93,10 +95,18 @@ class Response {
             throw new \InvalidArgumentException('Invalid redirect URL');
         }
 
+        if (Request::isAjax()) {
+            return $this->setStatusCode(200)
+                ->setJsonBody([
+                    'redirect' => $url,
+                    'status' => $statusCode
+                ]);
+        }
+    
         return $this->setStatusCode($statusCode)
                    ->setHeader('Location', $url)
                    ->setBody('');
-    }
+        }
 
     public function setBody($body): self {
         $this->body = $body;
