@@ -156,6 +156,12 @@ public function render(array $extra_vars = []): void
             ->setHeader('Expires', gmdate('D, d M Y H:i:s', time() + 3600) . ' GMT');
     }
 
+    public function verifyCsrfToken(): void {
+        if (!Session::validateCsrfToken(Request::get('_token'))) {
+            $this->response->setStatusCode(403)->send();
+        }
+    }
+
     private function isUserAuthenticated(): bool
     {
         return Session::get('user') !== null;
