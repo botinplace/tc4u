@@ -66,6 +66,8 @@ class Controller
             "pagetitle" => $extra_vars['pagetitle'] ?? ($this->pagedata['pagetitle'] ?? '')
         ], $extra_vars);
 
+        extract($this->pagedata);
+        
         $this->templateEngine = new TemplateEngine($extra_vars);
         
         if ($this->get_main_block_only && $this->xmlhttprequest) {
