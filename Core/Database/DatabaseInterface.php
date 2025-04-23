@@ -17,7 +17,7 @@ interface DatabaseInterface {
     public function rollback(): bool;
     
     // Query execution
-    public function execute(string $query, array $params = []): PDOStatement;
+    public function execute(string $query, array $params = []): ?PDOStatement;
     
     // Insert operations
     public function insert(string $query, array $params = []): string;
