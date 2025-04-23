@@ -6,7 +6,7 @@ use Core\Database\DatabaseFactory;
 abstract class Model {
     protected $db;
     
-    public function __construct(string $connectionName = null) {
+    public function __construct(?string $connectionName = null) {
         $this->db = $this->resolveConnection($connectionName);
     }
     
