@@ -20,7 +20,7 @@ class PostgreSQL implements DatabaseInterface
         $this->connect($config);
     }
 
-    public static function getInstance(array $config): DatabaseInterface 
+    public static function getInstance(array $config): static  
     {
         $connectionName = $config['name'] ?? 'default';
         
