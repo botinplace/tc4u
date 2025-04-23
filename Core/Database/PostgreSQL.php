@@ -5,36 +5,36 @@ use Core\Config\Config;
 use Core\Database\DatabaseInterface;
 use PDO;
 use PDOException;
-use Exception;
 
-class PostgreSQL implements DatabaseInterface {
-    private static $instances = [];
-    private $dbh = null;
-    private $transactionLevel = 0;
-    private $connectionName;
+class PostgreSQL implements DatabaseInterface 
+{
+    private static array $instances = [];
+    private ?PDO $dbh = null;
+    private int $transactionLevel = 0;
+    private string $connectionName;
+    private bool $isConnected = false;
 
-    // Приватный конструктор для Singleton
-    private function __construct(array $config) {
+    private function __construct(array $config) 
+    {
+        $this->connectionName = $config['name'] ?? 'default';
         $this->connect($config);
     }
 
-    public static function getInstance(array $config): self {
+    public static function getInstance(array $config): self 
+    {
         $connectionName = $config['name'] ?? 'default';
         
         if (!isset(self::$instances[$connectionName])) {
             self::$instances[$connectionName] = new self($config);
-            self::$instances[$connectionName]->connectionName = $connectionName;
         }
         
         return self::$instances[$connectionName];
     }
 
-    private function connect(array $config): void {
+    private function connect(array $config): void 
+    {
         $port = $config['port'] ?? 5432;
-        $dsn = "pgsql:host={$config['host']};" .
-               "port={$port};" .
-               "dbname={$config['database']};" .
-               "options='--client_encoding=UTF8'";
+        $dsn = "pgsql:host={$config['host']};port={$port};dbname={$config['database']};options='--client_encoding=UTF8'";
         
         try {
             $this->dbh = new PDO(
@@ -49,51 +49,88 @@ class PostgreSQL implements DatabaseInterface {
                     PDO::ATTR_STRINGIFY_FETCHES => false
                 ]
             );
+            $this->isConnected = true;
+            error_log("PostgreSQL connection established: {$this->connectionName}");
         } catch (PDOException $e) {
-            throw new Exception(
-                "Database connection failed [{$this->connectionName}]: " . 
-                $e->getMessage()
-            );
+            $this->isConnected = false;
+            error_log("PostgreSQL connection FAILED [{$this->connectionName}]: " . $e->getMessage());
         }
     }
 
-    public function beginTransaction(): bool {
-        if ($this->transactionLevel === 0) {
-            $this->dbh->beginTransaction();
+    public function beginTransaction(): bool 
+    {
+        if (!$this->isConnected) {
+            error_log("Transaction start failed - no active connection");
+            return false;
         }
-        $this->transactionLevel++;
-        return true;
+
+        try {
+            if ($this->transactionLevel === 0) {
+                $this->dbh->beginTransaction();
+            }
+            $this->transactionLevel++;
+            return true;
+        } catch (PDOException $e) {
+            error_log("Transaction start failed: " . $e->getMessage());
+            return false;
+        }
     }
 
-    public function commit(): bool {
-        if ($this->transactionLevel === 1) {
-            $this->dbh->commit();
+    public function commit(): bool 
+    {
+        if (!$this->isConnected) {
+            error_log("Commit failed - no active connection");
+            return false;
         }
-        $this->transactionLevel = max(0, $this->transactionLevel - 1);
-        return true;
+
+        try {
+            if ($this->transactionLevel === 1) {
+                $this->dbh->commit();
+            }
+            $this->transactionLevel = max(0, $this->transactionLevel - 1);
+            return true;
+        } catch (PDOException $e) {
+            error_log("Commit failed: " . $e->getMessage());
+            return false;
+        }
     }
 
-    public function rollback(): bool {
-        if ($this->transactionLevel === 1) {
-            $this->dbh->rollBack();
+    public function rollback(): bool 
+    {
+        if (!$this->isConnected) {
+            error_log("Rollback failed - no active connection");
+            return false;
         }
-        $this->transactionLevel = max(0, $this->transactionLevel - 1);
-        return true;
+
+        try {
+            if ($this->transactionLevel === 1) {
+                $this->dbh->rollBack();
+            }
+            $this->transactionLevel = max(0, $this->transactionLevel - 1);
+            return true;
+        } catch (PDOException $e) {
+            error_log("Rollback failed: " . $e->getMessage());
+            return false;
+        }
     }
 
-    public function execute(string $query, array $params = []): \PDOStatement {
+    public function execute(string $query, array $params = []): ?\PDOStatement 
+    {
+        if (!$this->isConnected) {
+            error_log("Query execution failed - no active connection");
+            return null;
+        }
+
         try {
             $sth = $this->dbh->prepare($query);
             
             foreach ($params as $key => $value) {
-                $paramType = PDO::PARAM_STR;
-                if (is_int($value)) {
-                    $paramType = PDO::PARAM_INT;
-                } elseif (is_bool($value)) {
-                    $paramType = PDO::PARAM_BOOL;
-                } elseif (is_null($value)) {
-                    $paramType = PDO::PARAM_NULL;
-                }
+                $paramType = match(true) {
+                    is_int($value) => PDO::PARAM_INT,
+                    is_bool($value) => PDO::PARAM_BOOL,
+                    is_null($value) => PDO::PARAM_NULL,
+                    default => PDO::PARAM_STR
+                };
                 
                 $sth->bindValue(
                     is_int($key) ? $key + 1 : $key,
@@ -105,88 +142,114 @@ class PostgreSQL implements DatabaseInterface {
             $sth->execute();
             return $sth;
         } catch (PDOException $e) {
-            throw new Exception('Query execution failed: ' . $e->getMessage() . 
-                              ' [Query: ' . $query . ']', (int)$e->getCode());
+            error_log("Query execution failed: " . $e->getMessage() . " [Query: " . substr($query, 0, 500) . "]");
+            return null;
         }
     }
 
-    public function insert(string $query, array $params = []): string {
-        $this->execute($query, $params);
-        return $this->dbh->lastInsertId();
+    public function insert(string $query, array $params = []): ?string 
+    {
+        $result = $this->execute($query, $params);
+        return $result ? $this->dbh->lastInsertId() : null;
     }
 
-    public function insertWithReturn(string $query, array $params = [], string $returnColumn = 'id'): array {
+    public function insertWithReturn(string $query, array $params = [], string $returnColumn = 'id'): ?array 
+    {
         if (!preg_match('/RETURNING/i', $query)) {
             $query .= " RETURNING $returnColumn";
         }
-        return $this->execute($query, $params)->fetchAll(PDO::FETCH_COLUMN);
+        $result = $this->execute($query, $params);
+        return $result ? $result->fetchAll(PDO::FETCH_COLUMN) : null;
     }
 
-    public function update(string $query, array $params = []): int {
-        $sth = $this->execute($query, $params);
-        return $sth->rowCount();
+    public function update(string $query, array $params = []): ?int 
+    {
+        $result = $this->execute($query, $params);
+        return $result ? $result->rowCount() : null;
     }
 
-    public function updateWithReturn(string $query, array $params = [], string $returnColumn = 'id'): array {
+    public function updateWithReturn(string $query, array $params = [], string $returnColumn = 'id'): ?array 
+    {
         if (!preg_match('/RETURNING/i', $query)) {
             $query .= " RETURNING $returnColumn";
         }
-        return $this->execute($query, $params)->fetchAll(PDO::FETCH_COLUMN);
+        $result = $this->execute($query, $params);
+        return $result ? $result->fetchAll(PDO::FETCH_COLUMN) : null;
     }
     
-    public function delete(string $query, array $params = []): int {
-        $sth = $this->execute($query, $params);
-        return $sth->rowCount();
+    public function delete(string $query, array $params = []): ?int 
+    {
+        $result = $this->execute($query, $params);
+        return $result ? $result->rowCount() : null;
     }
 
-    // Удаление с возвратом ID удалённых строк
-    public function deleteWithReturn(string $query, array $params = [], string $returnColumn = 'id'): array {
+    public function deleteWithReturn(string $query, array $params = [], string $returnColumn = 'id'): ?array 
+    {
         if (!preg_match('/RETURNING/i', $query)) {
             $query .= " RETURNING $returnColumn";
         }
-        return $this->execute($query, $params)->fetchAll(PDO::FETCH_COLUMN);
+        $result = $this->execute($query, $params);
+        return $result ? $result->fetchAll(PDO::FETCH_COLUMN) : null;
     }
 
-    public function selectRow(string $query, array $params = []): ?array {
-        $result = $this->execute($query, $params)->fetch();
-        return $result ?: null;
+    public function selectRow(string $query, array $params = []): ?array 
+    {
+        $result = $this->execute($query, $params);
+        return $result ? $result->fetch() ?: null : null;
     }
 
-    public function selectAll(string $query, array $params = []): array {
-        return $this->execute($query, $params)->fetchAll();
+    public function selectAll(string $query, array $params = []): ?array 
+    {
+        $result = $this->execute($query, $params);
+        return $result ? $result->fetchAll() : null;
     }
 
-    public function selectValue(string $query, array $params = [], $default = null) {
+    public function selectValue(string $query, array $params = [], $default = null) 
+    {
         $result = $this->selectRow($query, $params);
         return $result ? reset($result) : $default;
     }
 
-    public function selectColumn(string $query, array $params = []): array {
-        return $this->execute($query, $params)->fetchAll(PDO::FETCH_COLUMN);
+    public function selectColumn(string $query, array $params = []): ?array 
+    {
+        $result = $this->execute($query, $params);
+        return $result ? $result->fetchAll(PDO::FETCH_COLUMN) : null;
     }
 
-    public function close(): void {
+    public function close(): void 
+    {
         if ($this->dbh !== null && $this->dbh->inTransaction()) {
-            $this->dbh->rollBack();
-        }
-        $this->dbh = null;
-        self::$instance = null;
-    }
-
-    public function __destruct() {
-        if ($this->transactionLevel > 0) {
             $this->rollback();
         }
+        $this->dbh = null;
+        $this->isConnected = false;
+        unset(self::$instances[$this->connectionName]);
+    }
+
+    public function __destruct() 
+    {
         $this->close();
     }
 
-     // Проверка существования таблицы в базе данных
-    public function tableExists(string $tableName): bool {
+    public function tableExists(string $tableName): bool 
+    {
         $query = "SELECT EXISTS (
             SELECT FROM information_schema.tables 
             WHERE table_schema = 'public' 
             AND table_name = :table
         )";
         return (bool)$this->selectValue($query, [':table' => $tableName]);
+    }
+
+    public function isConnected(): bool
+    {
+        return $this->isConnected;
+    }
+
+    public function reconnect(): bool
+    {
+        $this->close();
+        $this->connect($this->config ?? []);
+        return $this->isConnected;
     }
 }
