@@ -30,8 +30,9 @@ class PostgreSQL implements DatabaseInterface {
     }
 
     private function connect(array $config): void {
+        $port = $config['port'] ?? 5432;
         $dsn = "pgsql:host={$config['host']};" .
-               "port={$config['port'] ?? 5432};" .
+               "port={$port};" .
                "dbname={$config['database']};" .
                "options='--client_encoding=UTF8'";
         
