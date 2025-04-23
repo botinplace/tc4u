@@ -20,22 +20,22 @@ interface DatabaseInterface {
     public function execute(string $query, array $params = []): ?PDOStatement;
     
     // Insert operations
-    public function insert(string $query, array $params = []): string;
-    public function insertWithReturn(string $query, array $params = [], string $returnColumn = 'id'): array;
+    public function insert(string $query, array $params = []): ?string;
+    public function insertWithReturn(string $query, array $params = [], string $returnColumn = 'id'): ?array;
     
     // Update operations
-    public function update(string $query, array $params = []): int;
-    public function updateWithReturn(string $query, array $params = [], string $returnColumn = 'id'): array;
+    public function update(string $query, array $params = []): ?int;
+    public function updateWithReturn(string $query, array $params = [], string $returnColumn = 'id'): ?array;
     
     // Delete operations
-    public function delete(string $query, array $params = []): int;
-    public function deleteWithReturn(string $query, array $params = [], string $returnColumn = 'id'): array;
+    public function delete(string $query, array $params = []): ?int;
+    public function deleteWithReturn(string $query, array $params = [], string $returnColumn = 'id'): ?array;
     
     // Select operations
     public function selectRow(string $query, array $params = []): ?array;
-    public function selectAll(string $query, array $params = []): array;
+    public function selectAll(string $query, array $params = []): ?array;
     public function selectValue(string $query, array $params = [], $default = null);
-    public function selectColumn(string $query, array $params = []): array;
+    public function selectColumn(string $query, array $params = []): ?array;
     
     // Schema operations
     public function tableExists(string $tableName): bool;
