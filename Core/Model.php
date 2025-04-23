@@ -16,7 +16,7 @@ abstract class Model {
         );
         
         if (!$connection instanceof DatabaseInterface) {
-            throw new RuntimeException("Invalid database connection");
+            throw new \RuntimeException("Invalid database connection");
         }
         
         return $connection;
