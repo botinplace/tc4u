@@ -113,6 +113,7 @@ public function render(array $extra_vars = []): void
             ->setStatusCode(404);
         $this->content = $this->loadContent('404');
         $this->page_not_found = true;
+        $this->pagedata['pagetitle']='Ошибка'
         $this->render();
             //->setHtmlBody($this->loadContent('404'))
             //->send();
