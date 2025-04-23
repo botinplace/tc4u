@@ -11,17 +11,15 @@ abstract class Model {
     }
     
     protected function resolveConnection(?string $connectionName): DatabaseInterface {
-        try {
-            return DatabaseFactory::create(
-                $connectionName ?? $this->getDefaultConnectionName()
-            );
-        } catch (\RuntimeException $e) {
-            // Попытка использовать подключение по умолчанию
-            if ($connectionName !== null && $connectionName !== 'default') {
-                return DatabaseFactory::create('default');
-            }
-            throw $e;
+        $connection = DatabaseFactory::create(
+            $connectionName ?? $this->getDefaultConnectionName()
+        );
+        
+        if (!$connection instanceof DatabaseInterface) {
+            throw new RuntimeException("Invalid database connection");
         }
+        
+        return $connection;
     }
     
     protected function getDefaultConnectionName(): string {
