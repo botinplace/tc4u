@@ -63,7 +63,7 @@ class Application
     
     error_log($errorMessage);
 
-        http_response_code(500);        
+        //http_response_code(500);        
         //echo "Ошибка: " . htmlspecialchars($e->getMessage(), ENT_QUOTES, "UTF-8");
     }
 
