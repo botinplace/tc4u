@@ -1,5 +1,4 @@
 <?php
-
 namespace Core\Database;
 
 use Core\Config\Config;
@@ -9,42 +8,51 @@ use PDOException;
 use Exception;
 
 class PostgreSQL implements DatabaseInterface {
-    private static $instance = null;
+    private static $instances = [];
     private $dbh = null;
     private $transactionLevel = 0;
+    private $connectionName;
 
     // Приватный конструктор для Singleton
-    private function __construct() {
-        $this->connect();
+    private function __construct(array $config) {
+        $this->connect($config);
     }
 
-    public static function getInstance(): self {
-        if (self::$instance === null) {
-            self::$instance = new self();
+    public static function getInstance(array $config): self {
+        $connectionName = $config['name'] ?? 'default';
+        
+        if (!isset(self::$instances[$connectionName])) {
+            self::$instances[$connectionName] = new self($config);
+            self::$instances[$connectionName]->connectionName = $connectionName;
         }
-        return self::$instance;
+        
+        return self::$instances[$connectionName];
     }
 
-    private function connect(): void {
-        $dsn = "pgsql:host=" . Config::get('database.connections.pgsql.host') . 
-               ";port=".Config::get('database.connections.pgsql.port',5432).";dbname=" . Config::get('database.connections.pgsql.name') . 
-               ";options='--client_encoding=UTF8'";
+    private function connect(array $config): void {
+        $dsn = "pgsql:host={$config['host']};" .
+               "port={$config['port'] ?? 5432};" .
+               "dbname={$config['database']};" .
+               "options='--client_encoding=UTF8'";
         
         try {
             $this->dbh = new PDO(
                 $dsn,
-                Config::get('database.connections.pgsql.user'),
-                Config::get('database.connections.pgsql.pass'),
-                [
+                $config['username'],
+                $config['password'],
+                $config['options'] ?? [
                     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                     PDO::ATTR_EMULATE_PREPARES => false,
-                    PDO::ATTR_PERSISTENT => true,
+                    PDO::ATTR_PERSISTENT => $config['persistent'] ?? false,
                     PDO::ATTR_STRINGIFY_FETCHES => false
                 ]
             );
         } catch (PDOException $e) {
-            throw new Exception('Database connection failed: ' . $e->getMessage());
+            throw new Exception(
+                "Database connection failed [{$this->connectionName}]: " . 
+                $e->getMessage()
+            );
         }
     }
 
