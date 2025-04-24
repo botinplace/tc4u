@@ -100,12 +100,12 @@ class TemplateEngine
     
     private function getValueForForeach(string $key, array $context)
     {
-        // Сначала проверяем в текущем контексте
-        if (isset($context['value'][$key])) {
+        // Проверяем в родительском контексте
+        if (isset($context['value']) && isset($context['value'][$key])) {
             return $context['value'][$key];
         }
         
-        // Затем проверяем в основном массиве данных
+        // Проверяем в основном массиве данных
         return $this->getValueFromFastArray($key);
     }
 
@@ -156,56 +156,56 @@ class TemplateEngine
     }
 
     private function replaceLoopPlaceholders(string $content): string
-    {
-        return preg_replace_callback(
-            "/{{\s*((?:parent\.)*)(key|value)(?:\.([a-zA-Z0-9_.-]+))?\s*}}/sm",
-            function ($matches) {
-                $parentLevels = substr_count($matches[1], 'parent.');
-                $var = $matches[2];
-                $propertyPath = $matches[3] ?? null;
+        {
+            return preg_replace_callback(
+                "/{{\s*((?:parent\.)*)(key|value)(?:\.([a-zA-Z0-9_.-]+))?\s*}}/sm",
+                function ($matches) {
+                    $parentLevels = substr_count($matches[1], 'parent.');
+                    $var = $matches[2];
+                    $propertyPath = $matches[3] ?? null;
     
-                // Получаем текущий контекст
-                $context = $this->getCurrentContext();
-                
-                // Поднимаемся по родительским контекстам
-                for ($i = 0; $i < $parentLevels; $i++) {
-                    if (isset($context['parent'])) {
-                        $context = $context['parent'];
-                    } else {
-                        return "";
-                    }
-                }
-    
-                // Получаем значение из контекста
-                $value = $context[$var] ?? null;
-    
-                // Обрабатываем вложенные свойства
-                if ($propertyPath && is_array($value)) {
-                    $keys = explode('.', $propertyPath);
-                    foreach ($keys as $key) {
-                        if (isset($value[$key])) {
-                            $value = $value[$key];
+                    // Получаем текущий контекст
+                    $context = $this->getCurrentContext();
+                    
+                    // Поднимаемся по родительским контекстам
+                    for ($i = 0; $i < $parentLevels; $i++) {
+                        if (isset($context['parent'])) {
+                            $context = $context['parent'];
                         } else {
                             return "";
                         }
                     }
-                }
+        
+                    // Получаем значение из контекста
+                    $value = $context[$var] ?? null;
     
-                // Специальная обработка для key и value без свойств
-                if ($propertyPath === null) {
-                    if ($var === 'key') {
-                        return htmlspecialchars($context['key'], ENT_QUOTES, "UTF-8");
+                    // Обрабатываем вложенные свойства
+                    if ($propertyPath && is_array($value)) {
+                        $keys = explode('.', $propertyPath);
+                        foreach ($keys as $key) {
+                            if (isset($value[$key])) {
+                                $value = $value[$key];
+                            } else {
+                                return "";
+                            }
+                        }
                     }
-                    if ($var === 'value' && is_scalar($context['value'])) {
-                        return htmlspecialchars($context['value'], ENT_QUOTES, "UTF-8");
-                    }
-                }
     
-                return is_scalar($value) ? htmlspecialchars($value, ENT_QUOTES, "UTF-8") : "";
-            },
-            $content
-        );
-    }
+                    // Специальная обработка для key и value без свойств
+                    if ($propertyPath === null) {
+                        if ($var === 'key') {
+                            return htmlspecialchars($context['key'], ENT_QUOTES, "UTF-8");
+                        }
+                        if ($var === 'value' && is_scalar($context['value'])) {
+                            return htmlspecialchars($context['value'], ENT_QUOTES, "UTF-8");
+                        }
+                    }
+    
+                    return is_scalar($value) ? htmlspecialchars($value, ENT_QUOTES, "UTF-8") : "";
+                },
+                $content
+            );
+        }
 
     private function processIfConditions(string $content, array $context = []): string
     {
@@ -259,6 +259,7 @@ class TemplateEngine
         return $this->getValueFromFastArray($variable);
     }
 
+    /*
     private function getValueFromFastArray(string $key)
     {
         // Сначала проверяем в текущем контексте
@@ -299,6 +300,25 @@ class TemplateEngine
     
         return $value;
     }
+*/
+        private function getValueFromFastArray(string $key)
+    {
+        $keys = explode('.', $key);
+        $value = $this->fast_array;
+
+        foreach ($keys as $k) {
+            if (isset($value["{{" . $k . "}}"])) {
+                $value = $value["{{" . $k . "}}"];
+            } elseif (isset($value[$k])) {
+                $value = $value[$k];
+            } else {
+                return null;
+            }
+        }
+
+        return $value;
+    }
+    
 
     private function resolvePlaceholder(array $matches): string
     {
