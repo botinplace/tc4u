@@ -83,6 +83,7 @@ class TemplateEngine
 {
     $pattern = '/\\\\?{%\s*foreach\s+([a-zA-Z0-9\-_.]+)\s*%}(.*?){%\s*endforeach\s*%}/s';
     
+    // Обрабатываем все циклы, включая вложенные
     while (preg_match($pattern, $template)) {
         $template = preg_replace_callback(
             $pattern,
@@ -147,15 +148,28 @@ private function resolveFromContext(string $key, array $context)
         return null;
     }
     
-    // Специальная обработка для item.property
+    // Если запрашивается просто item
+    if ($key === 'item') {
+        return $context['item'] ?? null;
+    }
+    
+    // Если запрашивается просто key
+    if ($key === 'key') {
+        return $context['key'] ?? null;
+    }
+    
+    // Обработка item.property
     if (strpos($key, 'item.') === 0) {
-        $property = substr($key, 5);
-        if (isset($context['item']) && is_array($context['item'])) {
-            return $this->resolveFromData($property, $context['item']);
+        $propertyPath = substr($key, 5);
+        $item = $context['item'] ?? null;
+        
+        if (is_array($item)) {
+            return $this->resolveFromData($propertyPath, $item);
         }
         return null;
     }
     
+    // Стандартная обработка
     $parts = explode('.', $key);
     $value = $context;
     
