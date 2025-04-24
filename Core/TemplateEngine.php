@@ -81,42 +81,55 @@ class TemplateEngine
 
     private function processLoops(string $template): string
     {
-        return preg_replace_callback(
-            '/\\\\?{%\s*foreach\s+([a-zA-Z0-9\-_.]+)\s*%}(.*?){%\s*endforeach\s*%}/s',
-            function ($matches) {
-                if (strpos($matches[0], '\\') === 0) {
-                    return substr($matches[0], 1);
-                }
-                
-                $items = $this->getValue($matches[1]);
-                if (!is_array($items)) {
-                    return '';
-                }
-                
-                $output = '';
-                foreach ($items as $key => $item) {
-                    $context = [
-                        'key' => $key,
-                        'item' => $item,
-                        'parent' => $this->getCurrentContext()
-                    ];
+        $pattern = '/\\\\?{%\s*foreach\s+([a-zA-Z0-9\-_.]+)\s*%}(.*?){%\s*endforeach\s*%}/s';
+        
+        while (preg_match($pattern, $template)) {
+            $template = preg_replace_callback(
+                $pattern,
+                function ($matches) {
+                    if (strpos($matches[0], '\\') === 0) {
+                        return substr($matches[0], 1);
+                    }
                     
-                    $this->pushContext($context);
-                    $output .= $this->processBlockContent($matches[2]);
-                    $this->popContext();
-                }
-                
-                return $output;
-            },
-            $template
-        );
+                    $items = $this->getValue($matches[1]);
+                    if (!is_array($items) || empty($items)) {
+                        return '';
+                    }
+                    
+                    $output = '';
+                    foreach ($items as $key => $item) {
+                        $context = [
+                            'key' => $key,
+                            'item' => $item,
+                            'parent' => $this->getCurrentContext()
+                        ];
+                        
+                        $this->pushContext($context);
+                        $processedContent = $this->processBlockContent($matches[2]);
+                        $output .= $processedContent;
+                        $this->popContext();
+                    }
+                    
+                    return $output;
+                },
+                $template
+            );
+        }
+        
+        return $template;
     }
     
     private function processBlockContent(string $content): string
     {
+        // Обрабатываем вложенные плейсхолдеры
         $content = $this->processNestedPlaceholders($content);
+        
+        // Обрабатываем вложенные циклы
         $content = $this->processLoops($content);
+        
+        // Обрабатываем условия
         $content = $this->processConditions($content);
+        
         return $content;
     }
 
@@ -131,6 +144,7 @@ class TemplateEngine
                 
                 $context = $this->getCurrentContext();
                 
+                // Поднимаемся по родительским контекстам
                 for ($i = 0; $i < $levels; $i++) {
                     if (isset($context['parent'])) {
                         $context = $context['parent'];
@@ -141,6 +155,7 @@ class TemplateEngine
                 
                 $value = $context[$var] ?? null;
                 
+                // Обрабатываем вложенные свойства (item.property.subproperty)
                 if ($property && is_array($value)) {
                     $parts = explode('.', $property);
                     foreach ($parts as $part) {
@@ -152,6 +167,7 @@ class TemplateEngine
                     }
                 }
                 
+                // Возвращаем значение с экранированием HTML
                 if (is_scalar($value)) {
                     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
                 }
@@ -193,7 +209,7 @@ class TemplateEngine
 
     private function getValue(string $key)
     {
-        // Check in current context first
+        // Сначала проверяем в текущем контексте
         $context = $this->getCurrentContext();
         $value = $this->resolveFromContext($key, $context);
         
@@ -201,7 +217,7 @@ class TemplateEngine
             return $value;
         }
         
-        // Check in global data
+        // Если не найдено в контексте, проверяем в глобальных данных
         return $this->resolveFromData($key, $this->data);
     }
     
