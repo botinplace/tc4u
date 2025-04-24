@@ -90,18 +90,17 @@ class TemplateEngine
         }
     
         foreach ($value as $key => $item) {
-            // Создаем новый контекст с сохранением родительского
             $parentContext = $this->getCurrentContext();
             $context = [
                 'key' => $key,
                 'value' => $item,
-                'parent' => $parentContext // Сохраняем родительский контекст
+                'parent' => $parentContext
             ];
             
             $this->pushContext($context);
             
-            // Обрабатываем вложенные элементы
-            $loopContent = $this->processLoopContent($content);
+            // Передаем контекст в processLoopContent
+            $loopContent = $this->processLoopContent($content, $context);
             $output .= $loopContent;
             
             $this->popContext();
@@ -112,15 +111,15 @@ class TemplateEngine
 
     private function processLoopContent(string $content, array $context): string
     {
-        // Обрабатываем вложенные плейсхолдеры
-        $content = $this->replaceLoopPlaceholders($content, $context);
-
-        // Обрабатываем вложенные условия
+        // Обрабатываем вложенные плейсхолдеры с учетом контекста
+        $content = $this->replaceLoopPlaceholders($content);
+        
+        // Обрабатываем условия с учетом контекста
         $content = $this->processIfConditions($content, $context);
-
+        
         // Обрабатываем вложенные циклы
         $content = $this->replaceForeachLoop($content);
-
+        
         return $content;
     }
 
@@ -133,22 +132,18 @@ class TemplateEngine
                 $var = $matches[2];
                 $propertyPath = $matches[3] ?? null;
     
-                // Получаем текущий контекст
                 $context = $this->getCurrentContext();
                 
-                // Поднимаемся по родительским контекстам
                 for ($i = 0; $i < $parentLevels; $i++) {
                     if (isset($context['parent'])) {
                         $context = $context['parent'];
                     } else {
-                        return ""; // Нет такого родительского уровня
+                        return "";
                     }
                 }
     
-                // Получаем значение
                 $value = $context[$var] ?? null;
     
-                // Обрабатываем вложенные свойства
                 if ($propertyPath && is_array($value)) {
                     $keys = explode('.', $propertyPath);
                     foreach ($keys as $key) {
