@@ -100,9 +100,31 @@ class TemplateEngine
     
     private function getValueForForeach(string $key, array $context)
     {
-        // Проверяем в родительском контексте
+        // Если ключ содержит точку (вложенный путь)
+        if (strpos($key, '.') !== false) {
+            $parts = explode('.', $key);
+            $value = $context;
+            
+            foreach ($parts as $part) {
+                if (isset($value['value'][$part])) {
+                    $value = $value['value'][$part];
+                } elseif (isset($value[$part])) {
+                    $value = $value[$part];
+                } else {
+                    return null;
+                }
+            }
+            return $value;
+        }
+        
+        // Проверяем в текущем контексте
         if (isset($context['value']) && isset($context['value'][$key])) {
             return $context['value'][$key];
+        }
+        
+        // Проверяем в родительских контекстах
+        if (isset($context['parent'])) {
+            return $this->getValueForForeach($key, $context['parent']);
         }
         
         // Проверяем в основном массиве данных
@@ -192,14 +214,18 @@ class TemplateEngine
                     }
     
                     // Специальная обработка для key и value без свойств
-                    if ($propertyPath === null) {
-                        if ($var === 'key') {
-                            return htmlspecialchars($context['key'], ENT_QUOTES, "UTF-8");
-                        }
-                        if ($var === 'value' && is_scalar($context['value'])) {
-                            return htmlspecialchars($context['value'], ENT_QUOTES, "UTF-8");
-                        }
-                    }
+        if ($propertyPath === null) {
+            if ($var === 'key') {
+                return htmlspecialchars($context['key'], ENT_QUOTES, "UTF-8");
+            }
+            if ($var === 'value') {
+                if (is_scalar($context['value'])) {
+                    return htmlspecialchars($context['value'], ENT_QUOTES, "UTF-8");
+                }
+                // Для массивов и объектов можно вернуть JSON или пустую строку
+                return "";
+            }
+        }
     
                     return is_scalar($value) ? htmlspecialchars($value, ENT_QUOTES, "UTF-8") : "";
                 },
