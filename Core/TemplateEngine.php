@@ -71,7 +71,36 @@ class TemplateEngine
                 if (strpos($matches[0], '\\') === 0) {
                     return ltrim($matches[0], '\\');
                 }
-                return $this->processForeach($matches);
+                
+                // Получаем текущий контекст
+                $currentContext = $this->getCurrentContext();
+                
+                // Если есть контекст и значение есть в контексте
+                if ($currentContext && isset($currentContext['value'][$matches[1]])) {
+                    $value = $currentContext['value'][$matches[1]];
+                } else {
+                    // Иначе ищем в основном массиве
+                    $value = $this->getValueFromFastArray($matches[1]);
+                }
+                
+                if (!is_array($value)) {
+                    return "";
+                }
+                
+                $output = "";
+                foreach ($value as $key => $item) {
+                    $context = [
+                        'key' => $key,
+                        'value' => $item,
+                        'parent' => $currentContext
+                    ];
+                    
+                    $this->pushContext($context);
+                    $output .= $this->processLoopContent($matches[2], $context);
+                    $this->popContext();
+                }
+                
+                return $output;
             },
             $output
         );
@@ -215,9 +244,32 @@ class TemplateEngine
 
     private function getValueFromFastArray(string $key)
     {
+        // Сначала проверяем в текущем контексте
+        $currentContext = $this->getCurrentContext();
+        if ($currentContext) {
+            $contextKeys = explode('.', $key);
+            $value = $currentContext;
+            
+            foreach ($contextKeys as $k) {
+                if (isset($value['value'][$k])) {
+                    $value = $value['value'][$k];
+                } elseif (isset($value[$k])) {
+                    $value = $value[$k];
+                } else {
+                    $value = null;
+                    break;
+                }
+            }
+            
+            if ($value !== null) {
+                return $value;
+            }
+        }
+        
+        // Если не найдено в контексте, ищем в основном массиве
         $keys = explode('.', $key);
         $value = $this->fast_array;
-
+    
         foreach ($keys as $k) {
             if (isset($value["{{" . $k . "}}"])) {
                 $value = $value["{{" . $k . "}}"];
@@ -227,7 +279,7 @@ class TemplateEngine
                 return null;
             }
         }
-
+    
         return $value;
     }
 
