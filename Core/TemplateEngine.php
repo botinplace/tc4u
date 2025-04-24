@@ -52,7 +52,7 @@ class TemplateEngine
     private function replacePlaceholders(string $output): string
     {
         return preg_replace_callback(
-            "/\\?{\{?\s*([a-zA-Z0-9-_.]*)\s*[|]?\s*([a-zA-Z0-9]*)\s*\}?\}/sm",
+            "/\\\\?{\\{?\s*([a-zA-Z0-9-_.]*)\s*[|]?\s*([a-zA-Z0-9]*)\s*\\}?\\}/sm",
             function ($matches) {
                 if (strpos($matches[0], '\\') === 0) {
                     return "{{" . $matches[1] . "}}";
@@ -62,64 +62,16 @@ class TemplateEngine
             $output
         );
     }
-    
-    private function replaceLoopPlaceholders(string $content): string
-    {
-        return preg_replace_callback(
-            "/{{\s*((?:parent\.)*)(key|value)(?:\.([a-zA-Z0-9_.-]+))?\s*}}/sm",
-            function ($matches) {
-                $parentLevels = substr_count($matches[1], 'parent.');
-                $var = $matches[2];
-                $propertyPath = $matches[3] ?? null;
-    
-                // Получаем текущий контекст
-                $context = $this->getCurrentContext();
-                
-                // Поднимаемся по родительским контекстам
-                for ($i = 0; $i < $parentLevels; $i++) {
-                    if (isset($context['parent'])) {
-                        $context = $context['parent'];
-                    } else {
-                        return "";
-                    }
-                }
-    
-                // Получаем значение из контекста
-                $value = $context[$var] ?? null;
-    
-                // Обрабатываем вложенные свойства
-                if ($propertyPath && is_array($value)) {
-                    $keys = explode('.', $propertyPath);
-                    foreach ($keys as $key) {
-                        if (isset($value[$key])) {
-                            $value = $value[$key];
-                        } else {
-                            return "";
-                        }
-                    }
-                }
-    
-                // Специальная обработка для key и value без свойств
-                if ($propertyPath === null) {
-                    if ($var === 'key') {
-                        return htmlspecialchars($context['key'], ENT_QUOTES, "UTF-8");
-                    }
-                    if ($var === 'value' && is_scalar($context['value'])) {
-                        return htmlspecialchars($context['value'], ENT_QUOTES, "UTF-8");
-                    }
-                }
-    
-                return is_scalar($value) ? htmlspecialchars($value, ENT_QUOTES, "UTF-8") : "";
-            },
-            $content
-        );
-    }
 
     private function replaceForeachLoop(string $output): string
     {
         return preg_replace_callback(
-            "/\\?{%\s*foreach\s+([a-zA-Z0-9-_.]*)\s*%}((?:(?R)|.*?)*){%\s*endforeach\s*%}/sm",
+            "/\\\\?{%\s*foreach\s+([a-zA-Z0-9-_.]*)\s*%}((?:(?R)|.*?)*){%\s*endforeach\s*%}/sm",
             function ($matches) {
+                if (strpos($matches[0], '\\') === 0) {
+                    return ltrim($matches[0], '\\');
+                }
+                
                 $currentContext = $this->getCurrentContext();
                 $value = $this->getValueForForeach($matches[1], $currentContext);
                 
@@ -145,7 +97,7 @@ class TemplateEngine
             $output
         );
     }
-
+    
     private function getValueForForeach(string $key, array $context)
     {
         // Проверяем в родительском контексте
@@ -155,6 +107,38 @@ class TemplateEngine
         
         // Проверяем в основном массиве данных
         return $this->getValueFromFastArray($key);
+    }
+
+    private function processForeach(array $matches): string
+    {
+        $arrayKey = trim($matches[1]);
+        $content = $matches[2];
+        $output = "";
+    
+        $value = $this->getValueFromFastArray($arrayKey);
+    
+        if (!is_array($value)) {
+            return "";
+        }
+    
+        foreach ($value as $key => $item) {
+            $parentContext = $this->getCurrentContext();
+            $context = [
+                'key' => $key,
+                'value' => $item,
+                'parent' => $parentContext
+            ];
+            
+            $this->pushContext($context);
+            
+            // Передаем контекст в processLoopContent
+            $loopContent = $this->processLoopContent($content, $context);
+            $output .= $loopContent;
+            
+            $this->popContext();
+        }
+    
+        return $output;
     }
 
     private function processLoopContent(string $content, array $context): string
@@ -171,11 +155,67 @@ class TemplateEngine
         return $content;
     }
 
+    private function replaceLoopPlaceholders(string $content): string
+        {
+            return preg_replace_callback(
+                "/{{\s*((?:parent\.)*)(key|value)(?:\.([a-zA-Z0-9_.-]+))?\s*}}/sm",
+                function ($matches) {
+                    $parentLevels = substr_count($matches[1], 'parent.');
+                    $var = $matches[2];
+                    $propertyPath = $matches[3] ?? null;
+    
+                    // Получаем текущий контекст
+                    $context = $this->getCurrentContext();
+                    
+                    // Поднимаемся по родительским контекстам
+                    for ($i = 0; $i < $parentLevels; $i++) {
+                        if (isset($context['parent'])) {
+                            $context = $context['parent'];
+                        } else {
+                            return "";
+                        }
+                    }
+        
+                    // Получаем значение из контекста
+                    $value = $context[$var] ?? null;
+    
+                    // Обрабатываем вложенные свойства
+                    if ($propertyPath && is_array($value)) {
+                        $keys = explode('.', $propertyPath);
+                        foreach ($keys as $key) {
+                            if (isset($value[$key])) {
+                                $value = $value[$key];
+                            } else {
+                                return "";
+                            }
+                        }
+                    }
+    
+                    // Специальная обработка для key и value без свойств
+                    if ($propertyPath === null) {
+                        if ($var === 'key') {
+                            return htmlspecialchars($context['key'], ENT_QUOTES, "UTF-8");
+                        }
+                        if ($var === 'value' && is_scalar($context['value'])) {
+                            return htmlspecialchars($context['value'], ENT_QUOTES, "UTF-8");
+                        }
+                    }
+    
+                    return is_scalar($value) ? htmlspecialchars($value, ENT_QUOTES, "UTF-8") : "";
+                },
+                $content
+            );
+        }
+
     private function processIfConditions(string $content, array $context = []): string
     {
         return preg_replace_callback(
-            "/\\?{%\s*if\s+([^ ]+)\s*(==|!=)\s*([^ ]+)\s*%}(.*?){%\s*endif\s*%}/sm",
+            "/\\\\?{%\s*if\s+([^ ]+)\s*(==|!=)\s*([^ ]+)\s*%}(.*?){%\s*endif\s*%}/sm",
             function ($matches) use ($context) {
+                if (strpos($matches[0], '\\') === 0) {
+                    return ltrim($matches[0], '\\');
+                }
+
                 $leftValue = $this->getComparisonValue($matches[1], $context);
                 $operator = trim($matches[2]);
                 $rightValue = $this->getComparisonValue($matches[3], $context);
@@ -219,7 +259,49 @@ class TemplateEngine
         return $this->getValueFromFastArray($variable);
     }
 
+    /*
     private function getValueFromFastArray(string $key)
+    {
+        // Сначала проверяем в текущем контексте
+        $currentContext = $this->getCurrentContext();
+        if ($currentContext) {
+            $contextKeys = explode('.', $key);
+            $value = $currentContext;
+            
+            foreach ($contextKeys as $k) {
+                if (isset($value['value'][$k])) {
+                    $value = $value['value'][$k];
+                } elseif (isset($value[$k])) {
+                    $value = $value[$k];
+                } else {
+                    $value = null;
+                    break;
+                }
+            }
+            
+            if ($value !== null) {
+                return $value;
+            }
+        }
+        
+        // Если не найдено в контексте, ищем в основном массиве
+        $keys = explode('.', $key);
+        $value = $this->fast_array;
+    
+        foreach ($keys as $k) {
+            if (isset($value["{{" . $k . "}}"])) {
+                $value = $value["{{" . $k . "}}"];
+            } elseif (isset($value[$k])) {
+                $value = $value[$k];
+            } else {
+                return null;
+            }
+        }
+    
+        return $value;
+    }
+*/
+        private function getValueFromFastArray(string $key)
     {
         $keys = explode('.', $key);
         $value = $this->fast_array;
@@ -236,6 +318,7 @@ class TemplateEngine
 
         return $value;
     }
+    
 
     private function resolvePlaceholder(array $matches): string
     {
