@@ -49,57 +49,71 @@ class TemplateEngine
         return $output;
     }
 
-private function replaceLoopPlaceholders(string $content): string
-{
-    return preg_replace_callback(
-        "/{{\s*((?:parent\.)*)(key|value)(?:\.([a-zA-Z0-9_.-]+))?\s*}}/sm",
-        function ($matches) {
-            $parentLevels = substr_count($matches[1], 'parent.');
-            $var = $matches[2];
-            $propertyPath = $matches[3] ?? null;
-
-            // Получаем текущий контекст
-            $context = $this->getCurrentContext();
-            
-            // Поднимаемся по родительским контекстам
-            for ($i = 0; $i < $parentLevels; $i++) {
-                if (isset($context['parent'])) {
-                    $context = $context['parent'];
-                } else {
-                    return "";
+    private function replacePlaceholders(string $output): string
+    {
+        return preg_replace_callback(
+            "/\\?{\{?\s*([a-zA-Z0-9-_.]*)\s*[|]?\s*([a-zA-Z0-9]*)\s*\}?\}/sm",
+            function ($matches) {
+                if (strpos($matches[0], '\\') === 0) {
+                    return "{{" . $matches[1] . "}}";
                 }
-            }
-
-            // Получаем значение из контекста
-            $value = $context[$var] ?? null;
-
-            // Обрабатываем вложенные свойства
-            if ($propertyPath && is_array($value)) {
-                $keys = explode('.', $propertyPath);
-                foreach ($keys as $key) {
-                    if (isset($value[$key])) {
-                        $value = $value[$key];
+                return $this->resolvePlaceholder($matches);
+            },
+            $output
+        );
+    }
+    
+    private function replaceLoopPlaceholders(string $content): string
+    {
+        return preg_replace_callback(
+            "/{{\s*((?:parent\.)*)(key|value)(?:\.([a-zA-Z0-9_.-]+))?\s*}}/sm",
+            function ($matches) {
+                $parentLevels = substr_count($matches[1], 'parent.');
+                $var = $matches[2];
+                $propertyPath = $matches[3] ?? null;
+    
+                // Получаем текущий контекст
+                $context = $this->getCurrentContext();
+                
+                // Поднимаемся по родительским контекстам
+                for ($i = 0; $i < $parentLevels; $i++) {
+                    if (isset($context['parent'])) {
+                        $context = $context['parent'];
                     } else {
                         return "";
                     }
                 }
-            }
-
-            // Специальная обработка для key и value без свойств
-            if ($propertyPath === null) {
-                if ($var === 'key') {
-                    return htmlspecialchars($context['key'], ENT_QUOTES, "UTF-8");
+    
+                // Получаем значение из контекста
+                $value = $context[$var] ?? null;
+    
+                // Обрабатываем вложенные свойства
+                if ($propertyPath && is_array($value)) {
+                    $keys = explode('.', $propertyPath);
+                    foreach ($keys as $key) {
+                        if (isset($value[$key])) {
+                            $value = $value[$key];
+                        } else {
+                            return "";
+                        }
+                    }
                 }
-                if ($var === 'value' && is_scalar($context['value'])) {
-                    return htmlspecialchars($context['value'], ENT_QUOTES, "UTF-8");
+    
+                // Специальная обработка для key и value без свойств
+                if ($propertyPath === null) {
+                    if ($var === 'key') {
+                        return htmlspecialchars($context['key'], ENT_QUOTES, "UTF-8");
+                    }
+                    if ($var === 'value' && is_scalar($context['value'])) {
+                        return htmlspecialchars($context['value'], ENT_QUOTES, "UTF-8");
+                    }
                 }
-            }
-
-            return is_scalar($value) ? htmlspecialchars($value, ENT_QUOTES, "UTF-8") : "";
-        },
-        $content
-    );
-}
+    
+                return is_scalar($value) ? htmlspecialchars($value, ENT_QUOTES, "UTF-8") : "";
+            },
+            $content
+        );
+    }
 
     private function replaceForeachLoop(string $output): string
     {
