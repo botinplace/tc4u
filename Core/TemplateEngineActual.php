@@ -1,7 +1,7 @@
 <?php
 namespace Core;
 
-class TemplateEngine
+class TemplateEngineActual
 {
     private $fast_array = [];
     private $contextStack = [];
