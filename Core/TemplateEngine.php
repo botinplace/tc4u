@@ -222,7 +222,7 @@ class TemplateEngine
             $value = $this->resolveFromData($key, $this->data);
             
             // Если не найдено и там, возможно это числовой массив (корневой)
-            if ($value === null && empty($this->contextStack) {
+            if ( $value === null && empty($this->contextStack) ) {
                 return $this->data;
             }
             
