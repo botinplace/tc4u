@@ -32,11 +32,10 @@ class TemplateEngine
         foreach ($extra_vars as $key => $value) {
             $fast_array["{{" . $key . "}}"] = is_scalar($value)
                 ? htmlspecialchars($value, ENT_QUOTES, "UTF-8")
-                : (is_array($value)
-                    ? $value
-                    : (is_object($value)
+                : ( is_array($value) 
+                         ? $value : (is_object($value)
                         ? "Object"
-                        : "");
+                        : "") );
         }
         return $fast_array;
     }
