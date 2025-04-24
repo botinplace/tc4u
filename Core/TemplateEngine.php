@@ -80,45 +80,97 @@ class TemplateEngine
     }
 
     private function processLoops(string $template): string
-        {
-            $pattern = '/\\\\?{%\s*foreach\s+([a-zA-Z0-9\-_.]+)\s*%}(.*?){%\s*endforeach\s*%}/s';
-            
-            while (preg_match($pattern, $template)) {
-                $template = preg_replace_callback(
-                    $pattern,
-                    function ($matches) {
-                        if (strpos($matches[0], '\\') === 0) {
-                            return substr($matches[0], 1);
-                        }
-                        
-                        $items = $this->getValue($matches[1]);
-                        if (!is_array($items)) {
-                            return '';
-                        }
-                        
-                        $output = '';
-                        foreach ($items as $key => $item) {
-                            $context = [
-                                'key' => $key,
-                                'item' => $item,
-                                'parent' => $this->getCurrentContext()
-                            ];
-                            
-                            $this->pushContext($context);
-                            $processedContent = $this->processBlockContent($matches[2]);
-                            $this->popContext();
-                            
-                            $output .= $processedContent;
-                        }
-                        
-                        return $output;
-                    },
-                    $template
-                );
-            }
-            
-            return $template;
+{
+    $pattern = '/\\\\?{%\s*foreach\s+([a-zA-Z0-9\-_.]+)\s*%}(.*?){%\s*endforeach\s*%}/s';
+    
+    while (preg_match($pattern, $template)) {
+        $template = preg_replace_callback(
+            $pattern,
+            function ($matches) {
+                if (strpos($matches[0], '\\') === 0) {
+                    return substr($matches[0], 1);
+                }
+                
+                $items = $this->getValue($matches[1]);
+                if (!is_array($items)) {
+                    return '';
+                }
+                
+                $output = '';
+                foreach ($items as $key => $item) {
+                    $context = [
+                        'key' => $key,
+                        'item' => $item,
+                        'parent' => $this->getCurrentContext()
+                    ];
+                    
+                    $this->pushContext($context);
+                    $processedContent = $this->processBlockContent($matches[2]);
+                    $this->popContext();
+                    
+                    $output .= $processedContent;
+                }
+                
+                return $output;
+            },
+            $template
+        );
+    }
+    
+    return $template;
+}
+
+private function getValue(string $key)
+{
+    // Сначала проверяем в текущем контексте
+    $context = $this->getCurrentContext();
+    $value = $this->resolveFromContext($key, $context);
+    
+    if ($value !== null) {
+        return $value;
+    }
+    
+    // Если не найдено в контексте, проверяем в глобальных данных
+    $value = $this->resolveFromData($key, $this->data);
+    
+    // Если это корневой массив (например, для {% foreach _ %})
+    if ($value === null && $key === '_' && empty($this->contextStack)) {
+        return $this->data;
+    }
+    
+    return $value;
+}
+
+private function resolveFromContext(string $key, array $context)
+{
+    if (empty($context)) {
+        return null;
+    }
+    
+    // Специальная обработка для item.property
+    if (strpos($key, 'item.') === 0) {
+        $property = substr($key, 5);
+        if (isset($context['item']) && is_array($context['item'])) {
+            return $this->resolveFromData($property, $context['item']);
         }
+        return null;
+    }
+    
+    $parts = explode('.', $key);
+    $value = $context;
+    
+    foreach ($parts as $part) {
+        if (isset($value[$part])) {
+            $value = $value[$part];
+        } elseif (isset($value['item']) && is_array($value['item']) && isset($value['item'][$part])) {
+            $value = $value['item'][$part];
+        } else {
+            return null;
+        }
+    }
+    
+    return $value;
+}
     
     private function processBlockContent(string $content): string
     {
