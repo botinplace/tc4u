@@ -1,7 +1,7 @@
 <?php
 namespace Core;
 
-class TemplateEngine
+class TemplateEngineOLD
 {
     private $fast_array = [];
 
