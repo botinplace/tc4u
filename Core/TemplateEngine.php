@@ -72,16 +72,8 @@ class TemplateEngine
                     return ltrim($matches[0], '\\');
                 }
                 
-                // Получаем текущий контекст
                 $currentContext = $this->getCurrentContext();
-                
-                // Если есть контекст и значение есть в контексте
-                if ($currentContext && isset($currentContext['value'][$matches[1]])) {
-                    $value = $currentContext['value'][$matches[1]];
-                } else {
-                    // Иначе ищем в основном массиве
-                    $value = $this->getValueFromFastArray($matches[1]);
-                }
+                $value = $this->getValueForForeach($matches[1], $currentContext);
                 
                 if (!is_array($value)) {
                     return "";
@@ -104,6 +96,17 @@ class TemplateEngine
             },
             $output
         );
+    }
+    
+    private function getValueForForeach(string $key, array $context)
+    {
+        // Сначала проверяем в текущем контексте
+        if (isset($context['value'][$key])) {
+            return $context['value'][$key];
+        }
+        
+        // Затем проверяем в основном массиве данных
+        return $this->getValueFromFastArray($key);
     }
 
     private function processForeach(array $matches): string
@@ -161,8 +164,10 @@ class TemplateEngine
                 $var = $matches[2];
                 $propertyPath = $matches[3] ?? null;
     
+                // Получаем текущий контекст
                 $context = $this->getCurrentContext();
                 
+                // Поднимаемся по родительским контекстам
                 for ($i = 0; $i < $parentLevels; $i++) {
                     if (isset($context['parent'])) {
                         $context = $context['parent'];
@@ -171,8 +176,10 @@ class TemplateEngine
                     }
                 }
     
+                // Получаем значение из контекста
                 $value = $context[$var] ?? null;
     
+                // Обрабатываем вложенные свойства
                 if ($propertyPath && is_array($value)) {
                     $keys = explode('.', $propertyPath);
                     foreach ($keys as $key) {
@@ -181,6 +188,16 @@ class TemplateEngine
                         } else {
                             return "";
                         }
+                    }
+                }
+    
+                // Специальная обработка для key и value без свойств
+                if ($propertyPath === null) {
+                    if ($var === 'key') {
+                        return htmlspecialchars($context['key'], ENT_QUOTES, "UTF-8");
+                    }
+                    if ($var === 'value' && is_scalar($context['value'])) {
+                        return htmlspecialchars($context['value'], ENT_QUOTES, "UTF-8");
                     }
                 }
     
