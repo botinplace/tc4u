@@ -246,19 +246,28 @@ private function replaceLoopPlaceholders(
     $value,
     $key
 ): string {
-    // Сначала обрабатываем текущий контекст
-    $content = str_replace(
-        ['{{ key }}', '{{value}}'],
-        [
-            htmlspecialchars($key, ENT_QUOTES, "UTF-8"),
-            is_array($value) ? "Array" : htmlspecialchars($value, ENT_QUOTES, "UTF-8")
-        ],
+    // Обрабатываем текущий контекст (разные варианты написания)
+    $content = preg_replace_callback(
+        '/{{\s*key\s*}}/i',
+        function() use ($key) {
+            return htmlspecialchars($key, ENT_QUOTES, "UTF-8");
+        },
         $content
     );
 
-    // Обрабатываем вложенные свойства value
     $content = preg_replace_callback(
-        '/{{\s*value\.([a-zA-Z0-9_.-]+)\s*}}/',
+        '/{{\s*value\s*}}/i',
+        function() use ($value) {
+            return is_array($value) 
+                ? "Array" 
+                : htmlspecialchars($value, ENT_QUOTES, "UTF-8");
+        },
+        $content
+    );
+
+    // Обрабатываем вложенные свойства value (с пробелами и без)
+    $content = preg_replace_callback(
+        '/{{\s*value\.([a-zA-Z0-9_.-]+)\s*}}/i',
         function ($matches) use ($value) {
             $nestedValue = $this->getNestedValue($value, $matches[1]);
             return $nestedValue !== null 
@@ -272,19 +281,21 @@ private function replaceLoopPlaceholders(
     if (!empty($this->loopStack)) {
         $currentIndex = count($this->loopStack) - 1;
         
-        // Обработка parent.key
+        // Обработка parent.key (с пробелами и без)
         if ($currentIndex > 0) {
             $parentContext = $this->loopStack[$currentIndex - 1];
-            $content = str_replace(
-                '{{ parent.key }}',
-                htmlspecialchars($parentContext['key'], ENT_QUOTES, "UTF-8"),
+            $content = preg_replace_callback(
+                '/{{\s*parent\.key\s*}}/i',
+                function() use ($parentContext) {
+                    return htmlspecialchars($parentContext['key'], ENT_QUOTES, "UTF-8");
+                },
                 $content
             );
         }
         
-        // Обработка parent.value.property
+        // Обработка parent.value.property (с пробелами и без)
         $content = preg_replace_callback(
-            '/{{\s*parent\.value\.([a-zA-Z0-9_.-]+)\s*}}/',
+            '/{{\s*parent\.value\.([a-zA-Z0-9_.-]+)\s*}}/i',
             function ($matches) use ($currentIndex) {
                 if ($currentIndex > 0) {
                     $parentContext = $this->loopStack[$currentIndex - 1];
