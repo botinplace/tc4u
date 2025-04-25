@@ -318,7 +318,7 @@ private function replaceLoopPlaceholders(
     array $fast_array
 ): string {
     return preg_replace_callback(
-        "/\\\\?{%\s*if\s+(!?\s*[a-zA-Z0-9-_.]+)\s*(?:([=!]=)\s*([^%]+))?\s*%}(.*?){%\s*endif\s*%}/sm",
+        "/\\\\?{%\s*if\s+(!?\s*[a-zA-Z0-9-_.]+)\s*(?:([=!]=)\s*([^%]+))?\s*%}(.*?)(?:{%\s*else\s*%}(.*?))?{%\s*endif\s*%}/sm",
         function ($ifMatches) use ($fast_array) {
             if ((strpos($ifMatches[0], '\\') === 0)) {
                 return ltrim($ifMatches[0], '\\');
@@ -326,6 +326,7 @@ private function replaceLoopPlaceholders(
             
             $negation = false;
             $variable = trim($ifMatches[1]);
+            $elseContent = $ifMatches[5] ?? '';
             
             // Обработка отрицания (!variable)
             if (strpos($variable, '!') === 0) {
@@ -337,7 +338,7 @@ private function replaceLoopPlaceholders(
             if (empty($ifMatches[2])) {
                 $value = $this->getValueForComparison($variable, $fast_array);
                 $conditionResult = $this->evaluateCondition($value, !$negation);
-                return $conditionResult ? $ifMatches[4] : "";
+                return $conditionResult ? $ifMatches[4] : $elseContent;
             }
             
             // Обычное сравнение (== или !=)
@@ -353,7 +354,7 @@ private function replaceLoopPlaceholders(
                 $comparisonResult = !$comparisonResult;
             }
             
-            return $comparisonResult ? $ifMatches[4] : "";
+            return $comparisonResult ? $ifMatches[4] : $elseContent;
         },
         $content
     );
@@ -372,7 +373,24 @@ private function evaluateCondition($value, bool $expected): bool
 
     private function getValueForComparison($variable, array $fast_array)
 {
-    // Проверяем доступ к родительским значениям через .parent
+    // Удаляем лишние пробелы и кавычки
+    $variable = trim($variable, " \t\n\r\0\x0B\"'");
+    
+    // Обработка строк в кавычках (например, "completed")
+    if (preg_match('/^["\'](.+)["\']$/', $variable, $matches)) {
+        return $matches[1];
+    }
+
+    // Проверка булевых значений
+    if ($variable === 'true') return true;
+    if ($variable === 'false') return false;
+    
+    // Проверка числовых значений
+    if (is_numeric($variable)) {
+        return $variable + 0; // Возвращаем как число
+    }
+
+    // Проверка доступа к родительским значениям через .parent
     if (strpos($variable, 'parent.') === 0) {
         $levels = substr_count($variable, 'parent.');
         $originalKey = substr($variable, strrpos($variable, '.') + 1);
@@ -388,11 +406,10 @@ private function evaluateCondition($value, bool $expected): bool
                 return $this->getNestedValue($loopContext['value'], $originalKey);
             }
         }
-        
         return $variable;
     }
 
-    // Проверяем текущий контекст цикла
+    // Проверка текущего контекста цикла
     if (!empty($this->loopStack)) {
         $currentLoop = end($this->loopStack);
         
@@ -403,12 +420,12 @@ private function evaluateCondition($value, bool $expected): bool
         }
     }
 
-    // Если переменная содержит точку (вложенные свойства)
+    // Обработка вложенных свойств (например, order.status)
     if (strpos($variable, '.') !== false) {
         $keys = explode('.', $variable);
         $firstKey = array_shift($keys);
         
-        // Проверяем текущий контекст цикла
+        // Проверка в контексте цикла
         if (!empty($this->loopStack) && ($firstKey === 'key' || $firstKey === 'value')) {
             $currentLoop = end($this->loopStack);
             $value = $currentLoop[$firstKey];
@@ -417,20 +434,22 @@ private function evaluateCondition($value, bool $expected): bool
                 $value = $this->getNestedValue($value, $k);
                 if ($value === null) break;
             }
-            
             return $value;
         }
         
-        // Проверяем fast_array
-        return $this->getValueFromFastArray($variable, $fast_array);
+        // Проверка в fast_array
+        $value = $this->getValueFromFastArray($variable, $fast_array);
+        if ($value !== null) {
+            return $value;
+        }
     }
 
-    // Если переменная является ключом из fast_array
+    // Проверка простых переменных
     if (isset($fast_array["{{" . $variable . "}}"])) {
         return $fast_array["{{" . $variable . "}}"];
     }
 
-    // Если переменная является строкой (например, "true", "false", число и т.д.)
+    // Возвращаем как строку, если ничего не найдено
     return $variable;
 }
 
