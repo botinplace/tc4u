@@ -22,7 +22,7 @@ public static function post(
     string $key, 
     mixed $default = null, 
     int $filter = FILTER_DEFAULT, 
-    array $options = []
+    array|int|null $options = []
 ): mixed 
 {
     // Проверка существование ключа
