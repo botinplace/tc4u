@@ -11,11 +11,46 @@ class Request
         return filter_input(INPUT_GET, $key, $filter, $options ?? 0) ?? $default;
     }
 
+    /*
     public static function post(string $key, mixed $default = null, int $filter = FILTER_DEFAULT, array|int|null $options = null): mixed
     {
         return filter_input(INPUT_POST, $key, $filter, $options ?? 0) ?? $default;
     }
+*/
 
+public static function post(
+    string $key, 
+    mixed $default = null, 
+    int $filter = FILTER_DEFAULT, 
+    array $options = []
+): mixed 
+{
+    // Проверка существование ключа
+    if (!isset($_POST[$key])) {
+        return $default;
+    }
+
+    $value = $_POST[$key];
+
+    // Определение типа данных
+    $isArray = is_array($value);
+    
+    // Добавление флага для массивов
+    if ($isArray) {
+        $options['flags'] = $options['flags'] ?? 0 | FILTER_REQUIRE_ARRAY;
+    }
+
+    // Фильтрация значениея
+    $result = filter_var(
+        $value, 
+        $filter, 
+        $options
+    );
+
+    return $result ?? $default;
+}
+
+    
     // Получение всех данных с фильтрацией
     public static function getAll(int $filter = FILTER_DEFAULT, array|int|null $options = null): array
     {
