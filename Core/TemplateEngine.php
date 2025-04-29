@@ -41,12 +41,12 @@ class TemplateEngine
         bool $inLoop = false
     ): string {
         return preg_replace_callback(
-            "/\\\\?{\\{?\s*([a-zA-Z0-9-_.]*)\s*[|]?\s*([a-zA-Z0-9]*)\s*\\}?\\}/sm",
+            "/\\\\?{\\{?(\s*[a-zA-Z0-9-_.]*\s*)[|]?(\s*[a-zA-Z0-9]*\s*)\\}?\\}/sm",
             function ($matches) use ($fast_array, $inLoop) {
                 if ((strpos($matches[0], '\\') === 0)) {
                     return "{{" . $matches[1] . "}}";
                 }
-
+                $matches[1] = trim($matches[1]);
                 return $this->resolvePlaceholder($matches, $fast_array);
             },
             $output
