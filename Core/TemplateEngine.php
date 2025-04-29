@@ -131,15 +131,23 @@ private function getNestedValue($value, $path)
     }
 
     $keys = explode('.', $path);
-    foreach ($keys as $k) {
+        foreach ($keys as $k) {
         if (is_array($value) && array_key_exists($k, $value)) {
             $value = $value[$k];
-        } elseif (is_object($value) && isset($value->$k)) {
+        } elseif (is_object($value) && property_exists($value, $k)) {
             $value = $value->$k;
         } else {
             return null;
         }
+        
+        // Преобразуем строковые булевые значения
+        if (is_string($value)) {
+            $lowerVal = strtolower($value);
+            if ($lowerVal === 'true') return true;
+            if ($lowerVal === 'false') return false;
+        }
     }
+    
     return $value;
 }
 
@@ -335,7 +343,7 @@ private function processIfConditions(
         array $fast_array
     ): string {
         return preg_replace_callback(
-            "/\\\\?{%\s*if\s+(!?\s*[a-zA-Z0-9-_.]+)\s*(?:([=!]=)\s*([^%]+))?\s*%}(.*?)(?:{%\s*else\s*%}(.*?))?{%\s*endif\s*%}/sm",
+             "/\\\\?{%\s*if\s+(!?\s*[a-zA-Z0-9-_.]+)\s*(?:([=!]=)\s*([^%]+))?\s*%}(.*?)(?:{%\s*else\s*%}(.*?))?{%\s*endif\s*%}/sm",
             function ($ifMatches) use ($fast_array) {
                 if ((strpos($ifMatches[0], '\\') === 0)) {
                     return ltrim($ifMatches[0], '\\');
@@ -382,13 +390,15 @@ private function processIfConditions(
     
 private function evaluateCondition($value, bool $expected): bool
 {
-    if ($expected) {
-        return !empty($value) || $value === true || $value === "true" 
-            || $value === 1 || $value === "1";
-    } else {
-        return empty($value) || $value === false || $value === "false" 
-            || $value === 0 || $value === "0";
+    // Явная проверка булевых значений
+    if (is_bool($value)) {
+        return $expected ? $value : !$value;
     }
+
+    // Оригинальная логика для других типов
+    return $expected 
+        ? !empty($value) || $value === "true" || $value === 1 || $value === "1"
+        : empty($value) || $value === "false" || $value === 0 || $value === "0";
 }
 
     private function getValueForComparison($variable, array $fast_array)
@@ -457,12 +467,19 @@ private function evaluateCondition($value, bool $expected): bool
             return $value;
         }
         
+        
         // Проверка в fast_array
-        $value = $this->getValueFromFastArray($variable, $fast_array);
-        if ($value !== null) {
-            return $value;
+           $value = $this->getValueFromFastArray($variable, $fast_array);
+    
+        if (is_string($value)) {
+            // Преобразуем строковые 'true'/'false' в boolean
+            $lowerValue = strtolower($value);
+            if ($lowerValue === 'true') return true;
+            if ($lowerValue === 'false') return false;
         }
-    }
+        
+        return $value;
+       }
 
   if (isset($fast_array["{{" . $variable . "}}"])) {
         return $fast_array["{{" . $variable . "}}"];
