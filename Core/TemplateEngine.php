@@ -258,9 +258,14 @@ private function replaceLoopPlaceholders(
     $content = preg_replace_callback(
         '/{{\s*value\s*}}/i',
         function() use ($value) {
-            return is_array($value) 
-                ? "Array" 
-                : htmlspecialchars($value, ENT_QUOTES, "UTF-8");
+            if (is_array($value)) {
+                return "Array";
+            }
+            
+            if (is_object($value)) {
+                return "Object";
+            }
+            return htmlspecialchars($value, ENT_QUOTES, "UTF-8");
         },
         $content
     );
