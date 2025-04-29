@@ -486,7 +486,7 @@ private function evaluateCondition($value, bool $expected): bool
     }
 
     // Если переменная не найдена - возвращаем null
-    return null;
+    return false;
 }
 
 
