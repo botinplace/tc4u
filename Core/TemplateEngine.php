@@ -363,7 +363,7 @@ private function processIfConditions(
         }
 
         // Простая проверка существования
-        return (bool)$this->getVariableValue($condition, $fast_array);
+        return $this->getVariableValue($condition, $fast_array)??false;
     }
 
     private function getVariableValue(string $variable, array $fast_array)
