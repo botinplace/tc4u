@@ -317,50 +317,78 @@ private function processIfConditions(
         string $content,
         array $fast_array
     ): string {
-        return preg_replace_callback(
-            "/\\\\?{%\s*if\s+(!?\s*[a-zA-Z0-9-_.]+)\s*(?:([=!]=)\s*([^%]+))?\s*%}(.*?)(?:{%\s*else\s*%}(.*?))?{%\s*endif\s*%}/sm",
-            function ($ifMatches) use ($fast_array) {
-                if ((strpos($ifMatches[0], '\\') === 0)) {
-                    return ltrim($ifMatches[0], '\\');
-                }
-                
-                $negation = false;
-                $variable = trim($ifMatches[1]);
-                $elseContent = $ifMatches[5] ?? '';
-                
-                // Обработка отрицания (!variable)
-                if (strpos($variable, '!') === 0) {
-                    $negation = true;
-                    $variable = trim(substr($variable, 1));
-                }
-                
-                // Простая проверка существования/значения
-                if (empty($ifMatches[2])) {
-                    $value = $this->getValueForComparison($variable, $fast_array);
-                    $conditionResult = $this->evaluateCondition($value, !$negation);
-                    $outputContent = $conditionResult ? $ifMatches[4] : $elseContent;
-                } else {
-                    // Обработка сравнения
-                    $operator = trim($ifMatches[2]);
-                    $rightValue = $this->getValueForComparison(trim($ifMatches[3]), $fast_array);
-                    $leftValue = $this->getValueForComparison($variable, $fast_array);
-                    
-                    $comparisonResult = ($operator === "==") 
-                        ? ($leftValue == $rightValue) 
-                        : ($leftValue != $rightValue);
-                    
-                    if ($negation) {
-                        $comparisonResult = !$comparisonResult;
-                    }
-                    
-                    $outputContent = $comparisonResult ? $ifMatches[4] : $elseContent;
+        $processed = preg_replace_callback(
+            "/\\\\?({%\s*if\s*(.*?)\s*%})(.*?)({%\s*else\s*%}(.*?))?{%\s*endif\s*%}/s",
+            function ($matches) use ($fast_array) {
+                if (strpos($matches[0], '\\') === 0) {
+                    return substr($matches[0], 1);
                 }
 
+                $fullMatch = $matches[0];
+                $condition = trim($matches[2]);
+                $ifContent = $matches[3];
+                $elseContent = $matches[5] ?? '';
+
+                $result = $this->evaluateComplexCondition($condition, $fast_array);
+                
+                $output = $result ? $ifContent : $elseContent;
+                
                 // Рекурсивная обработка вложенных условий
-                return $this->processIfConditions($outputContent, $fast_array);
+                return $this->processIfConditions($output, $fast_array);
             },
             $content
         );
+
+        // Удаляем оставшиеся теги
+        return preg_replace([
+            '/{%\s*if\s*(.*?)\s*%}/',
+            '/{%\s*else\s*%}/',
+            '/{%\s*endif\s*%}/'
+        ], '', $processed);
+    }
+
+    private function evaluateComplexCondition(string $condition, array $fast_array): bool
+    {
+        // Обработка отрицаний и сложных условий
+        if (preg_match('/^!\s*(\w+)/', $condition, $matches)) {
+            return (bool)!$this->getVariableValue($matches[1], $fast_array);
+        }
+        
+        // Обработка сравнений
+        if (preg_match('/(.+?)\s*([=!]+)\s*(.+)/', $condition, $matches)) {
+            $left = $this->getVariableValue(trim($matches[1]), $fast_array);
+            $right = $this->getVariableValue(trim($matches[3]), $fast_array);
+            
+            return (bool)$this->compareValues($left, $right, $matches[2]);
+        }
+
+        // Простая проверка существования
+        return (bool)$this->getVariableValue($condition, $fast_array);
+    }
+
+    private function getVariableValue(string $variable, array $fast_array)
+    {
+        // Упрощенная версия getValueForComparison
+        $variable = trim($variable, " \t\n\r\0\x0B\"'");
+        
+        // Проверка специальных значений
+        if ($variable === 'true') return true;
+        if ($variable === 'false') return false;
+        if (is_numeric($variable)) return $variable + 0;
+        
+        return $this->getValueFromFastArray($variable, $fast_array) ?? null;
+    }
+
+    private function compareValues($left, $right, string $operator): bool
+    {
+        switch ($operator) {
+            case '==':
+                return $left == $right;
+            case '!=':
+                return $left != $right;
+            default:
+                return false;
+        }
     }
 
 private function evaluateCondition($value, bool $expected): bool
