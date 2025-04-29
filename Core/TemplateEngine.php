@@ -365,12 +365,16 @@ private function processIfConditions(
 
 private function evaluateCondition($value, bool $expected): bool
 {
-    if ($expected) {
-        // Проверка на true/существование
-        return !empty($value) || $value === true || $value === "true" || $value === 1 || $value === "1";
+    if ($value === null) {
+        return !$expected; // Если expected=true (без отрицания), вернёт false
+    }
+    
+if ($expected) {
+        return !empty($value) || $value === true || $value === "true" 
+            || $value === 1 || $value === "1";
     } else {
-        // Проверка на false/отсутствие
-        return empty($value) || $value === false || $value === "false" || $value === 0 || $value === "0";
+        return empty($value) || $value === false || $value === "false" 
+            || $value === 0 || $value === "0";
     }
 }
 
@@ -453,7 +457,8 @@ private function evaluateCondition($value, bool $expected): bool
     }
 
     // Возвращаем как строку, если ничего не найдено
-    return $variable;
+    //return $variable;
+    return null;
 }
 
 
