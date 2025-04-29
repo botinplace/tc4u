@@ -404,7 +404,7 @@ private function evaluateCondition($value, bool $expected): bool
     private function getValueForComparison($variable, array $fast_array)
 {
     // Удаляем лишние пробелы и кавычки
-    $variable = trim($variable, " \t\n\r\0\x0B\"'");
+    //$variable = trim($variable, " \t\n\r\0\x0B\"'");
     
     // Обработка строк в кавычках (например, "completed")
     if (preg_match('/^["\'](.+)["\']$/', $variable, $matches)) {
