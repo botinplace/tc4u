@@ -485,8 +485,8 @@ if ($expected) {
     }
 
     // Возвращаем как строку, если ничего не найдено
-    //return $variable;
-    return null;
+    return $variable;
+    //return null;
 }
 
 
