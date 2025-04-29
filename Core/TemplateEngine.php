@@ -323,7 +323,7 @@ private function processIfConditions(
                 if ((strpos($ifMatches[0], '\\') === 0)) {
                     return ltrim($ifMatches[0], '\\');
                 }
-
+                
                 $negation = false;
                 $variable = trim($ifMatches[1]);
                 $elseContent = $ifMatches[5] ?? '';
@@ -362,15 +362,15 @@ private function processIfConditions(
             $content
         );
     }
-    
+
 private function evaluateCondition($value, bool $expected): bool
 {
     if ($expected) {
-        return !empty($value) || $value === true || $value === "true" 
-            || $value === 1 || $value === "1";
+        // Проверка на true/существование
+        return !empty($value) || $value === true || $value === "true" || $value === 1 || $value === "1";
     } else {
-        return empty($value) || $value === false || $value === "false" 
-            || $value === 0 || $value === "0";
+        // Проверка на false/отсутствие
+        return empty($value) || $value === false || $value === "false" || $value === 0 || $value === "0";
     }
 }
 
@@ -447,12 +447,13 @@ private function evaluateCondition($value, bool $expected): bool
         }
     }
 
-  if (isset($fast_array["{{" . $variable . "}}"])) {
+    // Проверка простых переменных
+    if (isset($fast_array["{{" . $variable . "}}"])) {
         return $fast_array["{{" . $variable . "}}"];
     }
 
-    // Если переменная не найдена - возвращаем null
-    return null;
+    // Возвращаем как строку, если ничего не найдено
+    return $variable;
 }
 
 
