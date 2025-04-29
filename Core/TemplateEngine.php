@@ -270,6 +270,12 @@ private function replaceLoopPlaceholders(
         '/{{\s*value\.([a-zA-Z0-9_.-]+)\s*}}/i',
         function ($matches) use ($value) {
             $nestedValue = $this->getNestedValue($value, $matches[1]);
+            if (is_array($nestedValue)) {
+                return "Array";
+            }
+            if (is_object($nestedValue)) {
+                return "Object";
+            }
             return $nestedValue !== null 
                 ? htmlspecialchars($nestedValue, ENT_QUOTES, "UTF-8")
                 : $matches[0];
@@ -300,6 +306,12 @@ private function replaceLoopPlaceholders(
                 if ($currentIndex > 0) {
                     $parentContext = $this->loopStack[$currentIndex - 1];
                     $nestedValue = $this->getNestedValue($parentContext['value'], $matches[1]);
+                    if (is_array($nestedValue)) {
+                        return "Array";
+                    }
+                    if (is_object($nestedValue)) {
+                        return "Object";
+                    }
                     return $nestedValue !== null 
                         ? htmlspecialchars($nestedValue, ENT_QUOTES, "UTF-8")
                         : '';
