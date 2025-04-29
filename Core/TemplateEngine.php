@@ -313,61 +313,64 @@ private function replaceLoopPlaceholders(
     return $content;
 }
 
-    private function processIfConditions(
-    string $content,
-    array $fast_array
-): string {
-    return preg_replace_callback(
-        "/\\\\?{%\s*if\s+(!?\s*[a-zA-Z0-9-_.]+)\s*(?:([=!]=)\s*([^%]+))?\s*%}(.*?)(?:{%\s*else\s*%}(.*?))?{%\s*endif\s*%}/sm",
-        function ($ifMatches) use ($fast_array) {
-            if ((strpos($ifMatches[0], '\\') === 0)) {
-                return ltrim($ifMatches[0], '\\');
-            }
-            
-            $negation = false;
-            $variable = trim($ifMatches[1]);
-            $elseContent = $ifMatches[5] ?? '';
-            
-            // Обработка отрицания (!variable)
-            if (strpos($variable, '!') === 0) {
-                $negation = true;
-                $variable = trim(substr($variable, 1));
-            }
-            
-            // Если нет оператора сравнения (простая проверка на существование/true)
-            if (empty($ifMatches[2])) {
-                $value = $this->getValueForComparison($variable, $fast_array);
-                $conditionResult = $this->evaluateCondition($value, !$negation);
-                return $conditionResult ? $ifMatches[4] : $elseContent;
-            }
-            
-            // Обычное сравнение (== или !=)
-            $operator = trim($ifMatches[2]);
-            $rightValue = $this->getValueForComparison(trim($ifMatches[3]), $fast_array);
-            $leftValue = $this->getValueForComparison($variable, $fast_array);
-            
-            $comparisonResult = ($operator === "==") 
-                ? ($leftValue == $rightValue) 
-                : ($leftValue != $rightValue);
-            
-            if ($negation) {
-                $comparisonResult = !$comparisonResult;
-            }
-            
-            return $comparisonResult ? $ifMatches[4] : $elseContent;
-        },
-        $content
-    );
-}
+private function processIfConditions(
+        string $content,
+        array $fast_array
+    ): string {
+        return preg_replace_callback(
+            "/\\\\?{%\s*if\s+(!?\s*[a-zA-Z0-9-_.]+)\s*(?:([=!]=)\s*([^%]+))?\s*%}(.*?)(?:{%\s*else\s*%}(.*?))?{%\s*endif\s*%}/sm",
+            function ($ifMatches) use ($fast_array) {
+                if ((strpos($ifMatches[0], '\\') === 0)) {
+                    return ltrim($ifMatches[0], '\\');
+                }
 
+                $negation = false;
+                $variable = trim($ifMatches[1]);
+                $elseContent = $ifMatches[5] ?? '';
+                
+                // Обработка отрицания (!variable)
+                if (strpos($variable, '!') === 0) {
+                    $negation = true;
+                    $variable = trim(substr($variable, 1));
+                }
+                
+                // Простая проверка существования/значения
+                if (empty($ifMatches[2])) {
+                    $value = $this->getValueForComparison($variable, $fast_array);
+                    $conditionResult = $this->evaluateCondition($value, !$negation);
+                    $outputContent = $conditionResult ? $ifMatches[4] : $elseContent;
+                } else {
+                    // Обработка сравнения
+                    $operator = trim($ifMatches[2]);
+                    $rightValue = $this->getValueForComparison(trim($ifMatches[3]), $fast_array);
+                    $leftValue = $this->getValueForComparison($variable, $fast_array);
+                    
+                    $comparisonResult = ($operator === "==") 
+                        ? ($leftValue == $rightValue) 
+                        : ($leftValue != $rightValue);
+                    
+                    if ($negation) {
+                        $comparisonResult = !$comparisonResult;
+                    }
+                    
+                    $outputContent = $comparisonResult ? $ifMatches[4] : $elseContent;
+                }
+
+                // Рекурсивная обработка вложенных условий
+                return $this->processIfConditions($outputContent, $fast_array);
+            },
+            $content
+        );
+    }
+    
 private function evaluateCondition($value, bool $expected): bool
 {
     if ($expected) {
-        // Проверка на true/существование
-        return !empty($value) || $value === true || $value === "true" || $value === 1 || $value === "1";
+        return !empty($value) || $value === true || $value === "true" 
+            || $value === 1 || $value === "1";
     } else {
-        // Проверка на false/отсутствие
-        return empty($value) || $value === false || $value === "false" || $value === 0 || $value === "0";
+        return empty($value) || $value === false || $value === "false" 
+            || $value === 0 || $value === "0";
     }
 }
 
@@ -444,13 +447,12 @@ private function evaluateCondition($value, bool $expected): bool
         }
     }
 
-    // Проверка простых переменных
-    if (isset($fast_array["{{" . $variable . "}}"])) {
+  if (isset($fast_array["{{" . $variable . "}}"])) {
         return $fast_array["{{" . $variable . "}}"];
     }
 
-    // Возвращаем как строку, если ничего не найдено
-    return $variable;
+    // Если переменная не найдена - возвращаем null
+    return null;
 }
 
 
