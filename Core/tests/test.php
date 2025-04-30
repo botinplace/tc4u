@@ -41,12 +41,12 @@ class TemplateEngine
         bool $inLoop = false
     ): string {
         return preg_replace_callback(
-            "/\\\\?{\\{?\s*([a-zA-Z0-9-_.]*)\s*[|]?\s*([a-zA-Z0-9]*)\s*\\}?\\}/sm",
+            "/\\\\?{\\{?(\s*[a-zA-Z0-9-_.]*\s*)[|]?(\s*[a-zA-Z0-9]*\s*)\\}?\\}/sm",
             function ($matches) use ($fast_array, $inLoop) {
                 if ((strpos($matches[0], '\\') === 0)) {
                     return "{{" . $matches[1] . "}}";
                 }
-
+                $matches[1] = trim($matches[1]);
                 return $this->resolvePlaceholder($matches, $fast_array);
             },
             $output
@@ -388,24 +388,6 @@ private function processIfConditions(
         );
     }
     
-    private function evaluateComplexCondition(string $condition, array $fast_array): bool
-{
-    // Обработка отрицаний
-    if (preg_match('/^!\s*(\w+)/', $condition, $matches)) {
-        $value = $this->getValueForComparison($matches[1], $fast_array);
-        return empty($value);
-    }
-
-    // Проверка существования значения
-    $value = $this->getValueForComparison($condition, $fast_array);
-    
-    // Специальная обработка массивов
-    if (is_array($value)) {
-        return !empty($value);
-    }
-    
-    return (bool)$value;
-}
 private function evaluateCondition($value, bool $expected): bool
 {
     // Явная проверка булевых значений
@@ -422,7 +404,7 @@ private function evaluateCondition($value, bool $expected): bool
     private function getValueForComparison($variable, array $fast_array)
 {
     // Удаляем лишние пробелы и кавычки
-    $variable = trim($variable, " \t\n\r\0\x0B\"'");
+    //$variable = trim($variable, " \t\n\r\0\x0B\"'");
     
     // Обработка строк в кавычках (например, "completed")
     if (preg_match('/^["\'](.+)["\']$/', $variable, $matches)) {
@@ -504,7 +486,7 @@ private function evaluateCondition($value, bool $expected): bool
     }
 
     // Если переменная не найдена - возвращаем null
-    return null;
+    return false;
 }
 
 
