@@ -339,54 +339,70 @@ private function replaceLoopPlaceholders(
 }
 
 private function processIfConditions(
-        string $content,
-        array $fast_array
-    ): string {
-        return preg_replace_callback(
-             "/\\\\?{%\s*if\s+(!?\s*[a-zA-Z0-9-_.]+)\s*(?:([=!]=)\s*([^%]+))?\s*%}(.*?)(?:{%\s*else\s*%}(.*?))?{%\s*endif\s*%}/sm",
-            function ($ifMatches) use ($fast_array) {
-                if ((strpos($ifMatches[0], '\\') === 0)) {
-                    return ltrim($ifMatches[0], '\\');
-                }
+    string $content,
+    array $fast_array
+): string {
+    $pattern = '/
+        ({%\s*if\s+(?<condition>.*?)\s*%})  # Условие if
+        (?<if_content>                       # Содержимое блока if
+            (?:                              # Повторяем:
+                (?!                          # Пока не встретим else или endif
+                    {%\s*(?:else|endif)\s*%}
+                )
+                (?:
+                    (?R)                     # Рекурсивно включаем вложенные if блоки
+                    |                        # Или любой символ
+                    .
+                )
+            )*
+        )
+        (?:                                 # Опциональный блок else
+            {%\s*else\s*%}
+            (?<else_content>                # Содержимое блока else
+                (?:                         
+                    (?!                      # Пока не встретим endif
+                        {%\s*endif\s*%}
+                    )
+                    (?:
+                        (?R)                 # Рекурсивно включаем вложенные if блоки
+                        |                    # Или любой символ
+                        .
+                    )
+                )*
+            )
+        )?
+        {%\s*endif\s*%}                     # Конец блока
+    /isx';
 
-                $negation = false;
-                $variable = trim($ifMatches[1]);
-                $elseContent = $ifMatches[5] ?? '';
-                
-                // Обработка отрицания (!variable)
-                if (strpos($variable, '!') === 0) {
-                    $negation = true;
-                    $variable = trim(substr($variable, 1));
-                }
-                
-                // Простая проверка существования/значения
-                if (empty($ifMatches[2])) {
-                    $value = $this->getValueForComparison($variable, $fast_array);
-                    $conditionResult = $this->evaluateCondition($value, !$negation);
-                    $outputContent = $conditionResult ? $ifMatches[4] : $elseContent;
-                } else {
-                    // Обработка сравнения
-                    $operator = trim($ifMatches[2]);
-                    $rightValue = $this->getValueForComparison(trim($ifMatches[3]), $fast_array);
-                    $leftValue = $this->getValueForComparison($variable, $fast_array);
-                    
-                    $comparisonResult = ($operator === "==") 
-                        ? ($leftValue == $rightValue) 
-                        : ($leftValue != $rightValue);
-                    
-                    if ($negation) {
-                        $comparisonResult = !$comparisonResult;
-                    }
-                    
-                    $outputContent = $comparisonResult ? $ifMatches[4] : $elseContent;
-                }
+    $result = preg_replace_callback(
+        $pattern,
+        function ($matches) use ($fast_array) {
+            $condition = trim($matches['condition']);
+            $ifContent = $matches['if_content'] ?? '';
+            $elseContent = $matches['else_content'] ?? '';
 
-                // Рекурсивная обработка вложенных условий
-                return $this->processIfConditions($outputContent, $fast_array);
-            },
-            $content
-        );
-    }
+            // Обработка условия
+            $negation = false;
+            if (strpos($condition, '!') === 0) {
+                $negation = true;
+                $condition = trim(substr($condition, 1));
+            }
+
+            // Получение значения для сравнения
+            $value = $this->getValueForComparison($condition, $fast_array);
+            $conditionResult = $this->evaluateCondition($value, !$negation);
+
+            // Выбор соответствующего контента
+            $outputContent = $conditionResult ? $ifContent : $elseContent;
+
+            // Рекурсивная обработка вложенных условий
+            return $this->processIfConditions($outputContent, $fast_array);
+        },
+        $content
+    );
+
+    return $result ?? $content;
+}
     
 private function evaluateCondition($value, bool $expected): bool
 {
