@@ -13,6 +13,7 @@ class PostgreSQL implements DatabaseInterface
     private int $transactionLevel = 0;
     private string $connectionName;
     private bool $isConnected = false;
+    private array $lastError = [];
 
     private function __construct(array $config) 
     {
@@ -120,6 +121,8 @@ class PostgreSQL implements DatabaseInterface
             error_log("Query execution failed - no active connection");
             return null;
         }
+        
+        $this->lastError = [];
 
         try {
             $sth = $this->dbh->prepare($query);
@@ -142,6 +145,7 @@ class PostgreSQL implements DatabaseInterface
             $sth->execute();
             return $sth;
         } catch (PDOException $e) {
+            $this->lastError = $e->errorInfo;
             error_log("Query execution failed: " . $e->getMessage() . " [Query: " . substr($query, 0, 500) . "]");
             return null;
         }
@@ -239,6 +243,18 @@ class PostgreSQL implements DatabaseInterface
             AND table_name = :table
         )";
         return (bool)$this->selectValue($query, [':table' => $tableName]);
+    }
+
+    /**
+    * Возвращает последнюю ошибку PDO
+    * @return array [code, message, driverCode]
+    */
+    public function getLastError(): array 
+    {
+        if ($this->dbh) {
+            $this->lastError = $this->dbh->errorInfo();
+        }
+        return $this->lastError;
     }
 
     public function isConnected(): bool
