@@ -115,6 +115,10 @@ class PostgreSQL implements DatabaseInterface
         }
     }
 
+    private function quoteIdentifier(string $field): string {
+        return '"' . str_replace('"', '""', $field) . '"';
+    }
+    
     public function execute(string $query, array $params = []): ?\PDOStatement 
     {
         if (!$this->isConnected) {
@@ -160,7 +164,7 @@ class PostgreSQL implements DatabaseInterface
     public function insertWithReturn(string $query, array $params = [], string $returnColumn = 'id'): ?array 
     {
         if (!preg_match('/RETURNING/i', $query)) {
-            $query .= " RETURNING $returnColumn";
+            $query .= " RETURNING ".$this->quoteIdentifier($returnColumn);
         }
         $result = $this->execute($query, $params);
         return $result ? $result->fetchAll(PDO::FETCH_COLUMN) : null;
@@ -175,7 +179,7 @@ class PostgreSQL implements DatabaseInterface
     public function updateWithReturn(string $query, array $params = [], string $returnColumn = 'id'): ?array 
     {
         if (!preg_match('/RETURNING/i', $query)) {
-            $query .= " RETURNING $returnColumn";
+            $query .= " RETURNING ".$this->quoteIdentifier($returnColumn);
         }
         $result = $this->execute($query, $params);
         return $result ? $result->fetchAll(PDO::FETCH_COLUMN) : null;
@@ -190,7 +194,7 @@ class PostgreSQL implements DatabaseInterface
     public function deleteWithReturn(string $query, array $params = [], string $returnColumn = 'id'): ?array 
     {
         if (!preg_match('/RETURNING/i', $query)) {
-            $query .= " RETURNING $returnColumn";
+            $query .= " RETURNING ".$this->quoteIdentifier($returnColumn);
         }
         $result = $this->execute($query, $params);
         return $result ? $result->fetchAll(PDO::FETCH_COLUMN) : null;
