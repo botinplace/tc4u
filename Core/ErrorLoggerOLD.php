@@ -1,7 +1,7 @@
 <?php
 namespace Core;
 
-class ErrorLogger {
+class ErrorLoggerOLD {
     private $logDir;
     private $logFile;
     private $maxLines;
