@@ -150,7 +150,7 @@ class PostgreSQL implements DatabaseInterface
             return $sth;
         } catch (PDOException $e) {
             $this->lastError = $e->errorInfo;
-            throw new DatabaseException("Query failed: " . $e->getMessage(), 0, $e);
+            throw new \DatabaseException("Query failed: " . $e->getMessage(), 0, $e);
             error_log("Query execution failed: " . $e->getMessage() . " [Query: " . substr($query, 0, 500) . "]");
             return null;
         }
@@ -267,6 +267,14 @@ class PostgreSQL implements DatabaseInterface
         return $this->isConnected;
     }
 
+    public function ping(): bool {
+        try {
+            return (bool)$this->dbh->query('SELECT 1');
+        } catch (PDOException $e) {
+            return false;
+        }
+    }
+    
     public function reconnect(): bool
     {
         $this->close();
