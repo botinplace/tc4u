@@ -16,7 +16,7 @@ class ErrorLogger {
             $this->logFile = $logFile;
             $this->maxLines = $maxLines;
             
-            set_error_handler([$this, 'handleError'], E_ALL | E_STRICT);
+            set_error_handler([$this, 'handleError'], E_ALL);
             set_exception_handler([$this, 'handleException']);
             register_shutdown_function([$this, 'handleShutdown']);
             
