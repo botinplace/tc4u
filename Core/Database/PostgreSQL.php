@@ -151,7 +151,7 @@ class PostgreSQL implements DatabaseInterface
         } catch (PDOException $e) {
             $this->lastError = $e->errorInfo;            
             error_log("Query execution failed: " . $e->getMessage() . " [Query: " . substr($query, 0, 500) . "]");
-            throw new \Exception("Query failed: " . $e->getMessage(), 0, $e);
+            //throw new \Exception("Query failed: " . $e->getMessage(), 0, $e);
             return null;
         }
     }
