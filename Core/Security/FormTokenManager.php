@@ -23,7 +23,7 @@ class FormTokenManager {
         $formId = bin2hex(random_bytes(16));
         $token = bin2hex(random_bytes(32));
         
-        Session::set( $this->sessionKey'.'$formId , [
+        Session::set( $this->sessionKey.'.'.$formId , [
             'token' => $token,
             'created_at' => time()
         ]);
@@ -40,12 +40,12 @@ class FormTokenManager {
      * Валидирует переданный токен
      */
     public function validateToken(string $formId, string $token): bool {
-        if (!Session::has( $this->sessionKey'.'$formId)  {
+        if (!Session::has( $this->sessionKey.'.'.$formId)  {
             return false;
         }
 
-        $stored = Session::get( $this->sessionKey'.'$formId);
-        Session::remove( $this->sessionKey'.'$formId );
+        $stored = Session::get( $this->sessionKey.'.'.$formId);
+        Session::remove( $this->sessionKey.'.'.$formId );
 
         return hash_equals($stored['token'], $token);
     }
@@ -56,7 +56,7 @@ class FormTokenManager {
     private function cleanupExpiredTokens(): void {
         foreach (Session::get($this->sessionKey) as $formId => $data) {
             if (time() - $data['created_at'] > $this->tokenLifetime) {
-                Session::remove( $this->sessionKey'.'$formId);
+                Session::remove( $this->sessionKey.'.'.$formId);
             }
         }
     }
