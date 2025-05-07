@@ -156,13 +156,6 @@ class PostgreSQL implements DatabaseInterface
         }
     }
 
-    /*
-    public function insert(string $query, array $params = []): ?string 
-    {
-        $result = $this->execute($query, $params);
-        return $result ? $this->dbh->lastInsertId() : null;
-    }
-    */
     public function insert(string $query, array $params = []): mixed 
     {
         $result = $this->execute($query, $params);
@@ -172,24 +165,34 @@ class PostgreSQL implements DatabaseInterface
         }
         
         // Если запрос содержит RETURNING, пытаемся получить значение
-        //if (preg_match('/RETURNING\s+([\w"]+)/i', $query, $matches)) {
-        if (preg_match('/RETURNING\s+(.+)/i', $query, $matches)) {
-            $columns = array_map('trim', explode(',', $matches[1])); // Разбиваем на поля
-            $returnedValues = $result->fetch(PDO::FETCH_ASSOC); // Получаем массив значений
-        
+        if (preg_match('/RETURNING\s+(.+?)(?:\s|$)/i', $query, $matches)) {
+            $columns = array_map(function($col) {
+                return trim(str_replace('"', '', $col)); // Удаляем кавычки и пробелы
+            }, explode(',', $matches[1]));
+            
+            $returnedValues = $result->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$returnedValues) {
+                return null;
+            }
+            
             // Если возвращается одно поле, возвращаем значение
             if (count($columns) === 1) {
-                return $returnedValues[$columns[0]] ?? null; // Возвращаем значение или null
+                return $returnedValues[$columns[0]] ?? null;
             }
-        
-            // Если возвращается несколько полей, возвращаем массив
-            return array_intersect_key($returnedValues, array_flip($columns));
-        
-            //$column = str_replace('"', '', $matches[1]);
-            //return $result->fetchColumn(0) ?: null;
+            
+            // Фильтруем результат, оставляя только запрошенные колонки
+            $result = [];
+            foreach ($columns as $col) {
+                if (array_key_exists($col, $returnedValues)) {
+                    $result[$col] = $returnedValues[$col];
+                }
+            }
+            
+            return $result;
         }
         
-        // Если RETURNING нет, возвращаем lastInsertId (для обратной совместимости)
+        // Если RETURNING нет, возвращаем lastInsertId
         return $this->dbh->lastInsertId();
     }
 
