@@ -156,10 +156,29 @@ class PostgreSQL implements DatabaseInterface
         }
     }
 
+    /*
     public function insert(string $query, array $params = []): ?string 
     {
         $result = $this->execute($query, $params);
         return $result ? $this->dbh->lastInsertId() : null;
+    }
+    */
+    public function insert(string $query, array $params = []): ?string 
+    {
+        $result = $this->execute($query, $params);
+        
+        if (!$result) {
+            return null;
+        }
+        
+        // Если запрос содержит RETURNING, пытаемся получить значение
+        if (preg_match('/RETURNING\s+([\w"]+)/i', $query, $matches)) {
+            $column = str_replace('"', '', $matches[1]);
+            return $result->fetchColumn(0) ?: null;
+        }
+        
+        // Если RETURNING нет, возвращаем lastInsertId (для обратной совместимости)
+        return $this->dbh->lastInsertId();
     }
 
     public function insertWithReturn(string $query, array $params = [], string $returnColumn = 'id'): ?array 
