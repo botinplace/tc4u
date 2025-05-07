@@ -172,9 +172,21 @@ class PostgreSQL implements DatabaseInterface
         }
         
         // Если запрос содержит RETURNING, пытаемся получить значение
-        if (preg_match('/RETURNING\s+([\w"]+)/i', $query, $matches)) {
-            $column = str_replace('"', '', $matches[1]);
-            return $result->fetchColumn(0) ?: null;
+        //if (preg_match('/RETURNING\s+([\w"]+)/i', $query, $matches)) {
+        if (preg_match('/RETURNING\s+(.+)/i', $query, $matches)) {
+            $columns = array_map('trim', explode(',', $matches[1])); // Разбиваем на поля
+            $returnedValues = $result->fetch(PDO::FETCH_ASSOC); // Получаем массив значений
+        
+            // Если возвращается одно поле, возвращаем значение
+            if (count($columns) === 1) {
+                return $returnedValues[$columns[0]] ?? null; // Возвращаем значение или null
+            }
+        
+            // Если возвращается несколько полей, возвращаем массив
+            return array_intersect_key($returnedValues, array_flip($columns));
+        
+            //$column = str_replace('"', '', $matches[1]);
+            //return $result->fetchColumn(0) ?: null;
         }
         
         // Если RETURNING нет, возвращаем lastInsertId (для обратной совместимости)
