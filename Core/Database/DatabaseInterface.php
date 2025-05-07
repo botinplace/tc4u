@@ -20,7 +20,7 @@ interface DatabaseInterface {
     public function execute(string $query, array $params = []): ?PDOStatement;
     
     // Insert operations
-    public function insert(string $query, array $params = []): ?string;
+    public function insert(string $query, array $params = []): mixed;
     public function insertWithReturn(string $query, array $params = [], string $returnColumn = 'id'): ?array;
     
     // Update operations
