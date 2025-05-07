@@ -163,7 +163,7 @@ class PostgreSQL implements DatabaseInterface
         return $result ? $this->dbh->lastInsertId() : null;
     }
     */
-    public function insert(string $query, array $params = []): ?string 
+    public function insert(string $query, array $params = []): mixed 
     {
         $result = $this->execute($query, $params);
         
