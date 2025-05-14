@@ -5,6 +5,7 @@ class TemplateEngine
 {
     private $fast_array = [];
     private $loopStack = []; // Стек для хранения контекста вложенных циклов
+    private array $fileTimeCache = [];
 
     public function __construct(array $fast_array = [])
     {
@@ -90,6 +91,11 @@ private function resolvePlaceholder(array $matches, array $fast_array): string
     $filter = $matches[2] ?? false;
     $key = trim($matches[1]);
 
+    // Обработка функции FilePath
+    if (strpos($key, 'FilePath(') === 0) {
+        return $this->processFilePathFunction($key, $filter);
+    }
+    
     // Проверяем доступ к родительским значениям через .parent
     if (strpos($key, 'parent.') === 0) {
         $levels = substr_count($key, 'parent.');
@@ -176,9 +182,38 @@ private function getNestedValue($value, $path)
     return $this->getValueFromFastArray($key, $fast_array);
 }
 
-
+    private function applyFileTimeFilter(string $path): string
+    {
+        if (isset($this->fileTimeCache[$path])) {
+            return $this->fileTimeCache[$path];
+        }
+        // Защита от directory traversal
+        $path = str_replace(['../', '..\\'], '', $path);
+        
+        // Если путь уже абсолютный
+        if (strpos($path, '/') === 0 || preg_match('#^[a-zA-Z]:\\\\#', $path)) {
+            $absolutePath = $path;
+        } else {
+            $absolutePath = $_SERVER['DOCUMENT_ROOT'] . '/' . ltrim($path, '/');
+        }
+        if (!file_exists($absolutePath)) {
+            $this->fileTimeCache[$path] = $path;
+            return $path;
+        }
+        
+        $timestamp = filemtime($absolutePath);
+        $result = $path . '?v=' . $timestamp;
+        $this->fileTimeCache[$path] = $result;
+        
+        return $result;
+    }
+    
     private function applyFilter($value, $filter)
     {
+        if ($filter === "filetime") {
+            return $this->applyFileTimeFilter($value);
+        }
+        
         if (is_array($value)) {
             return "Array";
         }
@@ -195,6 +230,37 @@ private function getNestedValue($value, $path)
             : htmlspecialchars(html_entity_decode($value), ENT_QUOTES, "UTF-8");
     }
 
+private function processFilePathFunction(string $key, $filter): string
+{
+    // 1. Проверка закрывающей скобки
+    if (substr($key, -1) !== ')') {
+        error_log("Template syntax error: Missing closing parenthesis in FilePath(): {{$key}}");
+        return "{{" . $key . "}}";
+    }
+
+    // 2. Извлечение содержимого скобок
+    $content = substr($key, 9, -1);
+    if ($content === false) {
+        error_log("Template syntax error: Empty FilePath()");
+        return "{{" . $key . "}}";
+    }
+
+    // 3. Проверка пустого пути
+    $path = trim($content);
+    if (empty($path)) {
+        error_log("Template error: Empty path in FilePath()");
+        return "{{" . $key . "}}";
+    }
+
+    // 4. Проверка корректности пути (базовая защита)
+    if (strpos($path, '..') !== false || strpos($path, "\0") !== false) {
+        error_log("Template security error: Invalid path in FilePath(): " . $path);
+        return "{{" . $key . "}}";
+    }
+
+    // 5. Применение фильтра
+    return $this->applyFilter($path, $filter);
+}
 private function processLoopContent(string $content, $value, $key, array $fast_array): string
 {
     // Сначала обрабатываем вложенные циклы
