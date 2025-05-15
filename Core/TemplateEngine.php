@@ -185,9 +185,10 @@ private function getNestedValue($value, $path)
 
     private function applyFileTimeFilter(string $path): string
     {
-        if (isset($this->fileTimeCache[$path])) {
-            return $this->fileTimeCache[$path];
-        }
+        //if (isset($this->fileTimeCache[$path])) {
+        //    return $this->fileTimeCache[$path];
+        //}
+        
         // Защита от directory traversal
         $path = str_replace(['../', '..\\'], '', $path);
         
@@ -198,13 +199,13 @@ private function getNestedValue($value, $path)
             $absolutePath = $_SERVER['DOCUMENT_ROOT'] . '/' . ltrim($path, '/');
         }
         if (!file_exists($absolutePath)) {
-            $this->fileTimeCache[$path] = $path;
+            //$this->fileTimeCache[$path] = $path;
             return $path;
         }
         
         $timestamp = filemtime($absolutePath);
         $result = $path . '?v=' . $timestamp;
-        $this->fileTimeCache[$path] = $result;
+        //$this->fileTimeCache[$path] = $result;
         
         return $result;
     }
