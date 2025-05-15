@@ -41,8 +41,9 @@ class TemplateEngine
         array $fast_array,
         bool $inLoop = false
     ): string {
+        //old: "/\\\\?{\\{?(\s*[a-zA-Z0-9-_.]*\s*)[|]?(\s*[a-zA-Z0-9]*\s*)\\}?\\}/sm",
         return preg_replace_callback(
-            "/\\\\?{\\{?(\s*[a-zA-Z0-9-_.]*\s*)[|]?(\s*[a-zA-Z0-9]*\s*)\\}?\\}/sm",
+            "/\\\\?{\\{?(\s*[a-zA-Z0-9-_.()\/\"'\\s]*\s*)[|]?(\s*[a-zA-Z0-9]*\s*)\\}?\\}/sm",            
             function ($matches) use ($fast_array, $inLoop) {
                 if ((strpos($matches[0], '\\') === 0)) {
                     return "{{" . $matches[1] . "}}";
@@ -247,6 +248,13 @@ private function processFilePathFunction(string $key, $filter): string
 
     // 3. Проверка пустого пути
     $path = trim($content);
+
+    if ((strpos($path, '"') === 0 && strrpos($path, '"') === strlen($path)-1)) {
+        $path = trim($path, '"');
+    } elseif ((strpos($path, "'") === 0 && strrpos($path, "'") === strlen($path)-1)) {
+        $path = trim($path, "'");
+    }
+    
     if (empty($path)) {
         error_log("Template error: Empty path in FilePath()");
         return "{{" . $key . "}}";
