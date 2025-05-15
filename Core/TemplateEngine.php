@@ -193,7 +193,7 @@ private function getNestedValue($value, $path)
         
         // Если путь уже абсолютный
         if (strpos($path, '/') === 0 || preg_match('#^[a-zA-Z]:\\\\#', $path)) {
-            $absolutePath = $path;
+            $absolutePath = PUBLIC_DIR.$path;
         } else {
             $absolutePath = $_SERVER['DOCUMENT_ROOT'] . '/' . ltrim($path, '/');
         }
