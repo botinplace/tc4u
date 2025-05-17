@@ -411,7 +411,7 @@ private function processIfConditions(
     array $fast_array
 ): string {
     $pattern = '/
-        ({%\s*if\s+(?<condition>.*?)\s*%})  # Условие if
+        (\\\\?{%\s*if\s+(?<condition>.*?)\s*%})  # Условие if
         (?<if_content>                       # Содержимое блока if
             (?:                              # Повторяем:
                 (?!                          # Пока не встретим else или endif
@@ -445,6 +445,12 @@ private function processIfConditions(
     $result = preg_replace_callback(
         $pattern,
         function ($matches) use ($fast_array) {
+            
+            if (strpos($matches[1], '\\') === 0) {
+                // Возвращаем оригинал без экранирующего слеша
+                return substr($matches[0], 1);
+            }
+            
             $condition = trim($matches['condition']);
             $ifContent = $matches['if_content'] ?? '';
             $elseContent = $matches['else_content'] ?? '';
