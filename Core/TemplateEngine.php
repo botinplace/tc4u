@@ -89,7 +89,7 @@ class TemplateEngine
  
 private function resolvePlaceholder(array $matches, array $fast_array): string
 {
-    $filter = $matches[2] ?? false;
+    $filter = trim($matches[2]) ?? false;
     $key = trim($matches[1]);
 
     // Обработка функции FilePath
