@@ -485,6 +485,7 @@ private function evaluateCondition($value, bool $expected): bool
         : empty($value) || $value === "false" || $value === 0 || $value === "0";
 }
 
+
     private function getValueForComparison($variable, array $fast_array)
 {
     // Удаляем лишние пробелы и кавычки
@@ -494,6 +495,24 @@ private function evaluateCondition($value, bool $expected): bool
     if (preg_match('/^["\'](.+)["\']$/', $variable, $matches)) {
         return $matches[1];
     }
+    
+
+    // Обработка операторов сравнения (==, !=, >, < и т.д.)
+    if (preg_match('/^(.+?)\s*(==|!=|>=|<=|>|<)\s*(.+)$/', $variable, $matches)) {
+        $leftOperand = $this->getValueForComparison(trim($matches[1]), $fast_array);
+        $operator = trim($matches[2]);
+        $rightOperand = $this->getValueForComparison(trim($matches[3]), $fast_array);
+
+        switch ($operator) {
+            case '==': return $leftOperand == $rightOperand;
+            case '!=': return $leftOperand != $rightOperand;
+            case '>': return $leftOperand > $rightOperand;
+            case '<': return $leftOperand < $rightOperand;
+            case '>=': return $leftOperand >= $rightOperand;
+            case '<=': return $leftOperand <= $rightOperand;
+            default: return false;
+        }
+    }
 
     // Проверка булевых значений
     if ($variable === 'true') return true;
@@ -501,7 +520,7 @@ private function evaluateCondition($value, bool $expected): bool
     
     // Проверка числовых значений
     if (is_numeric($variable)) {
-        return $variable + 0; // Возвращаем как число
+        return $variable + 0;
     }
 
     // Проверка доступа к родительским значениям через .parent
