@@ -188,26 +188,18 @@ private function getNestedValue($value, $path)
         if (isset($this->fileTimeCache[$path])) {
             return $this->fileTimeCache[$path];
         }
-        
-        // Защита от directory traversal
-        $path = str_replace(['../', '..\\'], '', $path);
-        
-        // Если путь уже абсолютный
-        //if (strpos($path, '/') === 0 || preg_match('#^[a-zA-Z]:\\\\#', $path)) {
-        if (strpos($path, '/') === 0) {
-            $absolutePath = PUBLIC_DIR.$path;
-        } else {
-            $absolutePath = $_SERVER['DOCUMENT_ROOT'] . '/' . ltrim($path, '/');
-        }
+    
+        // Нормализация пути
+        $normalizedPath = ltrim(str_replace(['../', '..\\'], '', $path), '/');
+        $absolutePath = PUBLIC_DIR . '/' . $normalizedPath;
+    
         if (!file_exists($absolutePath)) {
             $this->fileTimeCache[$path] = $path;
             return $path;
         }
-        
-        $timestamp = filemtime($absolutePath);
-        $result = $path . '?v=' . $timestamp;
+    
+        $result = $path . '?v=' . filemtime($absolutePath);
         $this->fileTimeCache[$path] = $result;
-        
         return $result;
     }
     
