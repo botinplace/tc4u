@@ -17,8 +17,15 @@ class Config {
         }
 
         // Локальные переопределения
-        if (file_exists(CONFIG_DIR . 'config.local.php')) {
-            self::$config = array_merge(self::$config, require CONFIG_DIR . 'config.local.php');
+        //if (file_exists(CONFIG_DIR . 'config.local.php')) {
+        //    self::$config = array_merge(self::$config, require CONFIG_DIR . 'config.local.php');
+        //}
+
+        // Конфиг окружения
+        $env = env('APP_ENV', 'production');
+        if (file_exists(CONFIG_DIR . "config.{$env}.php")) {
+            $envConfig = require CONFIG_DIR . "config.{$env}.php";
+            self::$config = array_replace_recursive(self::$config, $envConfig);
         }
 
         $fixed_uri = !empty( self::$config['app']['uri_fixer'] ) ? self::$config['app']['uri_fixer'] . (!empty(BASE_URL) ? '/' : '') : BASE_URL;
