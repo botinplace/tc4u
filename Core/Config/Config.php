@@ -6,7 +6,8 @@ class Config
     private static array $config = [];
     private static bool $loaded = false;
     private static array $requiredKeys = ['app.uri_fixer'];
-
+    private static array $cache = [];
+    
     public static function load(): void 
     {
         if (self::$loaded) {
@@ -69,12 +70,30 @@ class Config
         return $baseUrl;
     }
 
-    public static function get(string $key, $default = null) 
-    {
+     private static function loadConfig(): array {
+        $config = require CONFIG_DIR . 'config.php';
+        
+        // Применяем окружение
+        $env = $_ENV['APP_ENV'] ?? 'production';
+        $envConfig = CONFIG_DIR . "config.{$env}.php";
+        
+        if (file_exists($envConfig)) {
+            $config = array_merge($config, require $envConfig);
+        }
+        
+        return $config;
+    }
+    
+   public static function get(string $key, $default = null) {
+       
         if (!self::$loaded) {
             self::load();
         }
 
+       if (empty(self::$cache)) {
+            self::$cache = self::loadConfig();
+        }
+       
         $value = self::$config;
         foreach (explode('.', $key) as $segment) {
             if (!is_array($value) || !array_key_exists($segment, $value)) {
