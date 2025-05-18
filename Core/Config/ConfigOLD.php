@@ -3,7 +3,7 @@ namespace Core\Config;
 
 //use Core\Config\LoadEnv;
 
-class Config123 {
+class Config {
     private static $config = [];
 
     public static function load(): void {
