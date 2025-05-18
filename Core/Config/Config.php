@@ -86,4 +86,12 @@ class Config
             }
         }
     }
+
+    public static function reload(): void
+    {
+        self::$loaded = false;
+        self::$config = [];
+        self::load();
+    }
+    
 }
