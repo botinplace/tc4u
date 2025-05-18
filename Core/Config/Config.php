@@ -62,7 +62,7 @@ class Config
         $uriFixer = self::$config['app']['uri_fixer'] ?? '';
         $baseUrl = BASE_URL ?? '';
         
-        if (!empty($uriFixer) {
+        if (!empty($uriFixer)) {
             return rtrim($uriFixer, '/') . '/' . ltrim($baseUrl, '/');
         }
         
