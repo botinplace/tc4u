@@ -16,13 +16,39 @@ class LoadEnv
             self::loadEnvFile($env);
         }
     }
-
+    
+    private static function parseConnectionString(string $connectionString): array
+    {
+        $parsed = parse_url($connectionString);
+        
+        return [
+            'DBHOST' => $parsed['host'] ?? null,
+            'DBPORT' => $parsed['port'] ?? null,
+            'DBUSER' => $parsed['user'] ?? null,
+            'DBPASS' => $parsed['pass'] ?? null,
+            'DBNAME' => ltrim($parsed['path'] ?? '', '/'),
+        ];
+    }
+    
     private static function loadServerEnv(): void
     {
+        if (isset($_SERVER['DB_CONNECTION_STRING'])) {
+            $dbVars = self::parseConnectionString($_SERVER['DB_CONNECTION_STRING']);
+            foreach ($dbVars as $key => $value) {
+                if ($value !== null) {
+                    $_ENV[$key] = $value;
+                    putenv("$key=$value");
+                }
+            }
+        }
+        
+        // Остальные переменные
         foreach ($_SERVER as $key => $value) {
             if (strpos($key, 'DB_') === 0 || strpos($key, 'APP_') === 0) {
-                $_ENV[$key] = $value;
-                putenv("$key=$value");
+                if (!array_key_exists($key, $_ENV)) {
+                    $_ENV[$key] = $value;
+                    putenv("$key=$value");
+                }
             }
         }
     }
