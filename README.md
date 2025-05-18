@@ -212,6 +212,7 @@ return [
                         ],
                         'POST' => [
                             'controller' => [MainApp\Controllers\IndexController::class, 'postData'],
+                            'middlewares' => [ MainApp\Middlewares\CsrfMiddleware::class ]
                         ],
                     ],
                 ],
