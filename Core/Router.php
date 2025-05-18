@@ -14,7 +14,7 @@ class Router
     private $pageData = [];
     private $response;
     private $allowedMethods = ['GET,POST,PUT,DELETE,OPTIONS,HEAD'];
-    private $defaultMiddlewares = [];
+    private $globalMiddlewares = [];
 
     public function __construct()
     {
@@ -25,7 +25,7 @@ class Router
         $this->setAllowedMethods();
         $this->loadRoutesFromCache(); // Загрузка маршрутов из кэша
         $this->loadRoutesFromFile(); // В случае, если кэш не существует
-	$this->defaultMiddlewares = Config::get('middleware');
+	$this->globalMiddlewares = Config::get('middleware.global');
     }
 
     private function setAllowedMethods()
@@ -138,7 +138,7 @@ class Router
 
   private function processMiddlewares(array $middlewares, array $params, array &$pagedata): bool
     {
-	$middlewares = array_merge($this->defaultMiddlewares,$middlewares);
+	$middlewares = array_merge($this->globalMiddlewares,$middlewares);
         foreach ($middlewares as $middleware) {
             if (!class_exists($middleware)) {
                 error_log("Middleware class {$middleware} не найден");
