@@ -1,7 +1,7 @@
 <?php
 namespace Core\Config;
 
-class Config 
+class ConfigBroken
 {
     private static array $config = [];
     private static bool $loaded = false;
