@@ -7,18 +7,12 @@ use Core\Router;
 
 class Application
 {
-    private $config;
-    // Возможно default pagedata подгрузить
-    public $pageData = [
-        "title" => "My Application",
-        "description" => "This is a sample app.",
-    ];
+    // можно удалить
     private $router;
 
     public function __construct()
     {
-        // Загрузка конфигурации
-        //$this->config = Config::loadConfig(APP . "Config/config.php");        
+        // Загрузка роутера
         $this->router = new Router();
     }
 
@@ -62,7 +56,6 @@ class Application
     );
     
     error_log($errorMessage);
-
         //http_response_code(500);        
         //echo "Ошибка: " . htmlspecialchars($e->getMessage(), ENT_QUOTES, "UTF-8");
     }
