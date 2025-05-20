@@ -146,8 +146,12 @@ class Router
                 continue;
             }
             
-            $middlewareInstance = new $middleware();
+			// OLD
+            //$middlewareInstance = new $middleware();
             
+			// DI
+			$middlewareInstance = $this->container->make($middleware);			
+			
             if (!method_exists($middlewareInstance, 'handle')) {
                 error_log("Middleware {$middleware} handle метод не найден");
                 continue;
@@ -168,7 +172,7 @@ class Router
         // Если роут требует авторизации и пользователь не авторизован
         if ($route->needAuth && !$this->isUserAuthenticated()) {
 	    error_log("Попытка несанкционированного доступа к маршруту: " . $route->path);
-            $this->response->redirect( Config::get('app.auth_path') );
+            $this->response->redirect( Config::get('app.auth.path') );
         }
 
         [$class, $function] = $this->resolveController($route);
@@ -191,12 +195,13 @@ class Router
             return;
         }
 		
-        $controllerInstance = new $class($this->pageData);
-        $controllerInstance->{$function}(...array_values($params));
+		// OLD
+        //$controllerInstance = new $class($this->pageData);
+        //$controllerInstance->{$function}(...array_values($params));
 		
 		// DI
-		//$controller = $this->container->make( $class , $this->pageData );
-		//$controller->{$function}(...array_values($params));
+		$controller = $this->container->make( $class ,  ['pagedata' => $this->pageData] );
+		$controller->{$function}(...array_values($params));
 
         return;
     }

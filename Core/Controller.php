@@ -21,7 +21,7 @@ class Controller
     protected Response $response;
     private TemplateEngine $templateEngine;
 
-    public function __construct($pagedata)
+    public function __construct( array $pagedata = [] )
     {
         $routename = isset($pagedata['routename'])?$pagedata['routename']:'';
         $this->pagedata = $this->loadPageData( $routename );

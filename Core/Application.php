@@ -63,7 +63,7 @@ class Application
 		//});
 		
 		//$this->container->bind(Controller::class, function($c, $params) {
-		//	return new Controller( $params ?? []);
+		//	return new Controller( $params['pagedata'] ?? []);
 		//});
 	}
 
