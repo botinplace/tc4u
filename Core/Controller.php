@@ -17,7 +17,7 @@ class Controller
     public $reload_page = false;
     public $page_not_found = false;
     public $get_main_block_only = false;
-    public $pagedata;
+    public array $pagedata;
     protected Response $response;
     private TemplateEngine $templateEngine;
 
@@ -174,7 +174,7 @@ public function render(array $extra_vars = []): void
 
     private function loadPageData($pagename = ''): array
     {
-        $filePath = CONFIG_DIR. "pagedata.php";
+        $filePath = CONFIG_DIR. "/pagedata.php";
 
         if (!file_exists($filePath)) {
             trigger_error("Ошибка: файл не найден - $filePath", E_USER_WARNING);

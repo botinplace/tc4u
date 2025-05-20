@@ -70,6 +70,8 @@ class Cache {
         if (!file_exists($this->cacheFile) || !file_exists($this->sourceFile)) {
             return false; // Если один из файлов не существует, кэш недействителен
         }
+		
+		if(empty( $this->cacheFile ) && !empty($this->sourceFile) );
 
         // Сравниваем время последнего изменения кэш-файла и файла-источника
         return filemtime($this->cacheFile) > filemtime($this->sourceFile);

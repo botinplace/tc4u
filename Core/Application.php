@@ -8,23 +8,64 @@ use Core\Router;
 class Application
 {
     // можно удалить
-    private $router;
+	private Container $container;
+    private Router $router;
 
     public function __construct()
     {
-        // Загрузка роутера
-        $this->router = new Router();
+        $this->container = new Container();
+        $this->registerCoreServices();
     }
 
     private function dispatchCurrentRoute()
     {
-        $path = $this->sanitizePath($_SERVER["REQUEST_URI"]);
+        $path = $this->container->get(Request::class);
+		$path = $this->sanitizePath( $path::url() );
+		
+		//$path = $this->sanitizePath( Request::url() );
+		
+		
         try {
-            $this->router->dispatch($path);
+			
+		$this->router = $this->container->get(Router::class);
+        
+		$this->router->dispatch( $path );
+			
+		//$this->router->dispatch($path);
+
         } catch (\Exception $e) {
             $this->handleError($e);
         }
     }
+
+	private function registerCoreServices(): void
+	{
+		// Регистрация основных компонентов
+		$this->container->bind(Response::class);
+		
+		$this->container->singleton(Request::class, function($c) {
+			return new Request();
+		});
+		
+		$this->container->singleton(Session::class, function($c) {
+			return new Session();
+		});
+
+		$this->container->bind(Router::class, function($c) {
+			return new Router(
+				$c, // Container
+				$c->get(Response::class) // Response
+			);
+		});
+		
+		//$this->container->bind(Config::class, function($c) {
+		//	return new Config($c);
+		//});
+		
+		//$this->container->bind(Controller::class, function($c, $params) {
+		//	return new Controller( $params ?? []);
+		//});
+	}
 
     private function sanitizePath($uri)
     {

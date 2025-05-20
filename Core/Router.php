@@ -11,21 +11,22 @@ class Router
     private $cache;
     private $routesFile;
     private $cacheFile;
-    private $pageData = [];
-    private $response;
+    private array $pageData = [];
     private $allowedMethods = ['GET,POST,PUT,DELETE,OPTIONS,HEAD'];
     private $globalMiddlewares = [];
 
-    public function __construct()
+    public function __construct(
+		private Container $container,
+		private Response $response
+	)
     {
-        $this->routesFile = APP_DIR . "Config/routes.php";
+        $this->routesFile = CONFIG_DIR . "/routes.php";
         $this->cacheFile = APP_DIR . "cache/cachroutes.php";
         $this->cache = new Cache($this->cacheFile, $this->routesFile);
-        $this->response = new Response();
         $this->setAllowedMethods();
         $this->loadRoutesFromCache(); // Загрузка маршрутов из кэша
         $this->loadRoutesFromFile(); // В случае, если кэш не существует
-	$this->globalMiddlewares = Config::get('middleware.global');
+		$this->globalMiddlewares = Config::get('middleware.global');
     }
 
     private function setAllowedMethods()
@@ -98,11 +99,11 @@ class Router
         $method = strtoupper( Request::method() );
         
          if (!in_array($method, $this->allowedMethods)) {                
-                //$this->response->setHeader('HTTP/1.1 405 Method Not Allowed');
-		 $this->response->setStatusCode(405);
-                $this->response->send();
-                return;
-            }
+            //$this->response->setHeader('HTTP/1.1 405 Method Not Allowed');
+			$this->response->setStatusCode(405);
+            $this->response->send();
+            return;
+		}
 
         $normalizedPath = $this->normalizePath($path);
 
@@ -189,9 +190,13 @@ class Router
 	if (!$this->processMiddlewares($route->middlewares, $params,$this->pageData)) {
             return;
         }
-
-        $controllerInstance = new $class($this->pageData); // Сюда pagedata!!!
+		
+        $controllerInstance = new $class($this->pageData);
         $controllerInstance->{$function}(...array_values($params));
+		
+		// DI
+		//$controller = $this->container->make( $class , $this->pageData );
+		//$controller->{$function}(...array_values($params));
 
         return;
     }
