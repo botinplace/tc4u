@@ -20,7 +20,7 @@ class Application
     private function dispatchCurrentRoute()
     {
         $path = $this->container->get(Request::class);
-		$path = $this->sanitizePath( $path::url() );
+		    $path = $this->sanitizePath( $path::url() );
 		
 		//$path = $this->sanitizePath( Request::url() );
 		
@@ -40,6 +40,18 @@ class Application
 
 	private function registerCoreServices(): void
 	{
+
+        	// Загрузка конфигурации DI
+	        $diConfig = Config::get('di', []);
+        
+	        foreach ($diConfig['bindings'] ?? [] as $abstract => $concrete) {
+	            $this->container->bind($abstract, $concrete);
+        	}
+        
+	  	foreach ($diConfig['singletons'] ?? [] as $abstract => $concrete) {
+         		$this->container->singleton($abstract, $concrete);
+	        }
+
 		// Регистрация основных компонентов
 		$this->container->bind(Response::class);
 		
