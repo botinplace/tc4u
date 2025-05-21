@@ -38,38 +38,13 @@ class Application
 	private function registerCoreServices(): void
 	{
 
-        	// Загрузка конфигурации DI
-	        $diConfig = Config::get('di', []);
-        
-/*
-	        foreach ($diConfig['bindings'] ?? [] as $abstract => $concrete) {
-	            $this->container->bind($abstract, $concrete);
-        	}
-        
-	  	foreach ($diConfig['singletons'] ?? [] as $abstract => $concrete) {
-         		$this->container->singleton($abstract, $concrete);
-	        }
-*/
-
-	        foreach ($diConfig['bindings'] ?? [] as $abstract => $concrete) {
-            		if (is_callable($concrete)) {
-                		$this->container->bind($abstract, $concrete);
-           		} else {
-                		$this->container->bind($abstract, $concrete);
-	        	}
-        	}
-
-        	// Регистрация синглтонов
-        	foreach ($diConfig['singletons'] ?? [] as $abstract => $concrete) {
-            		if (is_array($concrete)) {
-                		$this->container->singleton($abstract, ...$concrete);
-            		} else {
-                		$this->container->singleton($abstract, $concrete);
-            		}
-        	}
-
+		// Основные сервисы
+		$this->container->singleton(Request::class, fn() => new Request());
+		$this->container->singleton(Session::class, fn() => new Session());
+	       	$this->container->bind(Router::class, fn($c) => new Router($c, $c->get(Response::class)));
 
 		// Регистрация основных компонентов
+/*
 		$this->container->bind(Response::class);
 		
 		$this->container->singleton(Request::class, function($c) {
@@ -86,6 +61,19 @@ class Application
 				$c->get(Response::class) // Response
 			);
 		});
+*/
+
+
+		// Загрузка конфигурации DI
+	        $diConfig = Config::get('di', []);
+        
+	        foreach ($diConfig['bindings'] ?? [] as $abstract => $concrete) {
+	            $this->container->bind($abstract, $concrete);
+        	}
+        
+	  	foreach ($diConfig['singletons'] ?? [] as $abstract => $concrete) {
+         		$this->container->singleton($abstract, $concrete);
+	        }
 		
 	}
 
