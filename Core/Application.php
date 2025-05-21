@@ -2,123 +2,160 @@
 namespace Core;
 
 use Core\Config\Config;
-use Core\Request;
-use Core\Router;
+use Core\Exceptions\ContainerException;
+use RuntimeException;
 
 class Application
 {
-    // можно удалить
-	private Container $container;
-    	private Router $router;
+    private Container $container;
+    private Router $router;
 
     public function __construct()
     {
-
-	if (env('APP_ENV') === 'production') {
-	    $container->compile(APP_DIR.'/cache');
-	    require APP_DIR.'/cache/CompiledContainer.php';
-	    $this->container = new CompiledContainer();
-	}else{
-	        $this->container = new Container();
-	        $this->registerCoreServices();
-	}
+        $this->initializeContainer();
+        $this->registerCoreServices();
     }
 
-    private function dispatchCurrentRoute()
+    private function initializeContainer(): void
     {
-        $path = $this->container->get(Request::class);
-	$path = $this->sanitizePath( $path::url() );	
-		
-        try {
-			
-		$this->router = $this->container->get(Router::class);
-        
-		$this->router->dispatch( $path );
-			
-		//$this->router->dispatch($path);
+        if ($this->shouldUseCompiledContainer()) {
+            $this->loadCompiledContainer();
+        } else {
+            $this->container = new Container();
+        }
+    }
 
-        } catch (\Exception $e) {
+    private function shouldUseCompiledContainer(): bool
+    {
+        return env('APP_ENV') === 'production' 
+            && file_exists(APP_DIR.'/cache/CompiledContainer.php');
+    }
+
+    private function loadCompiledContainer(): void
+    {
+	$filePath = APP_DIR.'/cache/CompiledContainer.php';
+        
+	if (!file_exists($filePath)) {
+    	    throw new ContainerException('Compiled container not found');
+        }
+
+        require_once $filePath;
+    	$this->container = new \MainApp\cache\CompiledContainer();   
+ }
+
+    private function registerCoreServices(): void
+    {
+        // Базовые сервисы для всех окружений
+        $this->container->singleton(Request::class, fn() => new Request());
+        $this->container->singleton(Session::class, fn() => new Session());
+        $this->container->bind(Router::class, fn($c) => new Router(
+            $c,
+            $c->get(Response::class)
+        ));
+
+        // Загрузка конфигурации DI
+        $this->loadDiConfig();
+
+        // Компиляция в production если нужно
+        if (env('APP_ENV') === 'production' && !$this->container->isCompiled()) {
+            $this->container->compile(APP_DIR.'/cache');
+        }
+    }
+
+    private function loadDiConfig(): void
+    {
+        $diConfig = Config::get('di', []);
+
+        foreach ($diConfig['bindings'] ?? [] as $abstract => $concrete) {
+            $this->container->bind($abstract, $concrete);
+        }
+
+        foreach ($diConfig['singletons'] ?? [] as $abstract => $concrete) {
+            $this->container->singleton($abstract, $concrete);
+        }
+    }
+
+    private function dispatchCurrentRoute(): void
+    {
+        try {
+            $request = $this->container->get(Request::class);
+            $path = $this->sanitizePath($request::url());
+            
+            $this->router = $this->container->get(Router::class);
+            $this->router->dispatch($path);
+
+        } catch (\Throwable $e) {
             $this->handleError($e);
         }
     }
 
-	private function registerCoreServices(): void
-	{
-
-		// Основные сервисы
-		$this->container->singleton(Request::class, fn() => new Request());
-		$this->container->singleton(Session::class, fn() => new Session());
-	       	$this->container->bind(Router::class, fn($c) => new Router($c, $c->get(Response::class)));
-
-		// Регистрация основных компонентов
-/*
-		$this->container->bind(Response::class);
-		
-		$this->container->singleton(Request::class, function($c) {
-			return new Request();
-		});
-		
-		$this->container->singleton(Session::class, function($c) {
-			return new Session();
-		});
-
-		$this->container->bind(Router::class, function($c) {
-			return new Router(
-				$c, // Container
-				$c->get(Response::class) // Response
-			);
-		});
-*/
-
-
-		// Загрузка конфигурации DI
-	        $diConfig = Config::get('di', []);
-        
-	        foreach ($diConfig['bindings'] ?? [] as $abstract => $concrete) {
-	            $this->container->bind($abstract, $concrete);
-        	}
-        
-	  	foreach ($diConfig['singletons'] ?? [] as $abstract => $concrete) {
-         		$this->container->singleton($abstract, $concrete);
-	        }
-		
-	}
-
-    private function sanitizePath($uri)
+    private function sanitizePath(string $uri): string
     {
         $path = filter_var(trim($uri), FILTER_SANITIZE_URL);
         $path = explode("?", $path, 2)[0];
 
-        // Удаление лишнего (например /admin/)
-        $uri_fixer = Config::get('app.uri_fixer');
-        if ($uri_fixer && $uri_fixer !== "") {
-            $path = preg_replace("/^" . preg_quote( $uri_fixer , "/") . '(\/|$)/', "/", $path);
-        }
-
-        if (defined('BASE_URL') && BASE_URL !== "") {
-            $path = preg_replace("/^\/" . preg_quote(BASE_URL, "/") . '(\/|$)/', "/", $path);
-        }
+        // Обработка URI фиксера
+        $path = $this->applyUriFixes($path);
 
         return $path ?: "/";
     }
 
-    private function handleError(\Exception $e)
+    private function applyUriFixes(string $path): string
     {
-    $errorMessage = sprintf(
-        "[%s] Ошибка 500: %s в файле %s на строке %d\nStack trace:\n%s",
-        date('Y-m-d H:i:s'),
-        $e->getMessage(),
-        $e->getFile(),
-        $e->getLine(),
-        $e->getTraceAsString()
-    );
-    
-    error_log($errorMessage);
-        //http_response_code(500);        
-        //echo "Ошибка: " . htmlspecialchars($e->getMessage(), ENT_QUOTES, "UTF-8");
+        if ($uriFixer = Config::get('app.uri_fixer')) {
+            $path = preg_replace(
+                "/^" . preg_quote($uriFixer, "/") . '(\/|$)/', 
+                "/", 
+                $path
+            );
+        }
+
+        if (defined('BASE_URL') && BASE_URL !== "") {
+            $path = preg_replace(
+                "/^\/" . preg_quote(BASE_URL, "/") . '(\/|$)/',
+                "/",
+                $path
+            );
+        }
+
+        return $path;
     }
 
-    public function run()
+    private function handleError(\Throwable $e): void
+    {
+        $this->logError($e);
+        
+        if (env('APP_ENV') !== 'production') {
+            $this->renderError($e);
+        }
+
+        http_response_code(500);
+        exit;
+    }
+
+    private function logError(\Throwable $e): void
+    {
+        error_log(sprintf(
+            "[%s] ERROR: %s in %s:%d\nStack trace:\n%s",
+            date('Y-m-d H:i:s'),
+            $e->getMessage(),
+            $e->getFile(),
+            $e->getLine(),
+            $e->getTraceAsString()
+        ));
+    }
+
+    private function renderError(\Throwable $e): void
+    {
+        echo "<h1>Application Error</h1>";
+        echo "<pre>" . htmlspecialchars($e->getMessage()) . "</pre>";
+        
+        if (Config::get('app.debug')) {
+            echo "<pre>" . htmlspecialchars($e->getTraceAsString()) . "</pre>";
+        }
+    }
+
+    public function run(): void
     {        
         $this->dispatchCurrentRoute();
     }

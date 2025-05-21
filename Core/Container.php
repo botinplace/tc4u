@@ -12,6 +12,11 @@ class Container {
     private array $reflectionCache = [];
     private array $resolving = [];
     private array $compiledCache = [];
+    protected bool $isCompiled = false;
+
+    public function isCompiled(): bool {
+        return $this->isCompiled;
+    }
 
     public function bind(string $abstract, $concrete = null): void {
         $this->bindings[$abstract] = $concrete ?? $abstract;
@@ -59,6 +64,7 @@ class Container {
         $this->validateCompilation();
         $code = $this->generateContainerCode();
         $this->saveCompiledContainer($cacheDir, $code);
+	$this->isCompiled = true;
     }
 
     private function isSingletonResolved(string $abstract): bool {
@@ -137,7 +143,9 @@ class Container {
     }
 
     private function generateContainerCode(): string {
-        $code = "<?php declare(strict_types=1);\n\n";
+        $code = "<?php \n declare(strict_types=1);\n\n";
+        $code .= "namespace MainApp\\cache;\n\n";
+        $code .= "use Core\\Container;\n\n";
         $code .= "class CompiledContainer extends Container {\n";
         $code .= "    private \$compiledInstances = [];\n\n";
 
