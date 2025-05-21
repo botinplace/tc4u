@@ -26,6 +26,20 @@ class Container {
         return isset($this->bindings[$id]) || class_exists($id);
     }
 
+    private function generateCompiledClass(array $cache): string {
+
+        $code = "<?php\nclass CompiledContainer extends Container {\n";
+
+        foreach ($cache as $abstract => $meta) {
+            $code .= "public function create{$abstract}() {\n";
+            // Генерация кода создания объекта
+            $code .= "}\n";
+        }
+
+        $code .= "}";
+        return $code;
+    }
+
     public function make(string $abstract, array $parameters = []) {
         // Проверка циклических зависимостей
         if (isset($this->resolving[$abstract])) {

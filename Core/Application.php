@@ -9,7 +9,7 @@ class Application
 {
     // можно удалить
 	private Container $container;
-    private Router $router;
+    	private Router $router;
 
     public function __construct()
     {
@@ -20,10 +20,7 @@ class Application
     private function dispatchCurrentRoute()
     {
         $path = $this->container->get(Request::class);
-		    $path = $this->sanitizePath( $path::url() );
-		
-		//$path = $this->sanitizePath( Request::url() );
-		
+	$path = $this->sanitizePath( $path::url() );	
 		
         try {
 			
@@ -44,6 +41,7 @@ class Application
         	// Загрузка конфигурации DI
 	        $diConfig = Config::get('di', []);
         
+/*
 	        foreach ($diConfig['bindings'] ?? [] as $abstract => $concrete) {
 	            $this->container->bind($abstract, $concrete);
         	}
@@ -51,6 +49,25 @@ class Application
 	  	foreach ($diConfig['singletons'] ?? [] as $abstract => $concrete) {
          		$this->container->singleton($abstract, $concrete);
 	        }
+*/
+
+	        foreach ($diConfig['bindings'] ?? [] as $abstract => $concrete) {
+            		if (is_callable($concrete)) {
+                		$this->container->bind($abstract, $concrete);
+           		} else {
+                		$this->container->bind($abstract, $concrete);
+	        	}
+        	}
+
+        	// Регистрация синглтонов
+        	foreach ($diConfig['singletons'] ?? [] as $abstract => $concrete) {
+            		if (is_array($concrete)) {
+                		$this->container->singleton($abstract, ...$concrete);
+            		} else {
+                		$this->container->singleton($abstract, $concrete);
+            		}
+        	}
+
 
 		// Регистрация основных компонентов
 		$this->container->bind(Response::class);
@@ -70,13 +87,6 @@ class Application
 			);
 		});
 		
-		//$this->container->bind(Config::class, function($c) {
-		//	return new Config($c);
-		//});
-		
-		//$this->container->bind(Controller::class, function($c, $params) {
-		//	return new Controller( $params['pagedata'] ?? []);
-		//});
 	}
 
     private function sanitizePath($uri)

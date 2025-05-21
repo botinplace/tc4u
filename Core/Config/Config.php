@@ -36,6 +36,8 @@ class Config {
         self::$config['app']['fixed_uri'] = $fixed_uri;
 
         self::validateConfig();
+
+	//file_put_contents(APP_DIR .'/cache/cacheconfig.php', '<?php return '.var_export(self::$config, true).';');
     }
 
     public static function get(string $key, $default = null) {
