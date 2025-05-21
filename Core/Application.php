@@ -13,8 +13,15 @@ class Application
 
     public function __construct()
     {
-        $this->container = new Container();
-        $this->registerCoreServices();
+
+	if (env('APP_ENV') === 'production') {
+	    $container->compile(APP_DIR.'/cache');
+	    require APP_DIR.'/cache/CompiledContainer.php';
+	    $this->container = new CompiledContainer();
+	}else{
+	        $this->container = new Container();
+	        $this->registerCoreServices();
+	}
     }
 
     private function dispatchCurrentRoute()
