@@ -2,33 +2,60 @@
 namespace Core;
 
 //use Psr\Container\ContainerInterface;
+//use Psr\Log\LoggerInterface;
+use ReflectionClass;
+use ReflectionException;
 use RuntimeException;
 
-//class Container implements ContainerInterface {
-class Container {
+//class Container implements ContainerInterface
+class Container
+{
     private array $bindings = [];
     private array $instances = [];
     private array $singletons = [];
     private array $reflectionCache = [];
     private array $resolving = [];
-    private array $compiledCache = [];
+    private array $tags = [];
     protected bool $isCompiled = false;
+    private ?LoggerInterface $logger = null;
+
+    public function __construct(?LoggerInterface $logger = null)
+    {
+        $this->logger = $logger;
+    }
 
     public function isCompiled(): bool {
         return $this->isCompiled;
     }
 
-    public function bind(string $abstract, $concrete = null): void {
+    public function bind(string $abstract, $concrete = null, bool $singleton = false): void {
         $this->bindings[$abstract] = $concrete ?? $abstract;
+        if ($singleton) {
+            $this->singletons[$abstract] = true;
+        }
     }
 
     public function singleton(string $abstract, $concrete = null): void {
-        $this->bind($abstract, $concrete);
-        $this->singletons[$abstract] = true;
+        $this->bind($abstract, $concrete, true);
+    }
+
+    public function tag(array $services, string $tag): void {
+        foreach ($services as $service) {
+            $this->tags[$tag][] = $service;
+        }
+    }
+
+    public function getTagged(string $tag): array {
+        return array_map([$this, 'get'], $this->tags[$tag] ?? []);
     }
 
     public function get($id) {
-        return $this->make($id);
+        try {
+            return $this->make($id);
+        } catch (\Throwable $e) {
+            $this->logError($e);
+            throw $e;
+        }
     }
 
     public function has($id): bool {
@@ -37,117 +64,189 @@ class Container {
 
     public function make(string $abstract, array $parameters = []) {
         if (isset($this->resolving[$abstract])) {
-            throw new RuntimeException("Circular dependency: " 
-                . implode(' → ', array_keys($this->resolving)) . " → $abstract");
+            $error = "Circular dependency: " . implode(' → ', array_keys($this->resolving)) . " → $abstract";
+            $this->logError(new RuntimeException($error));
+            throw new RuntimeException($error);
         }
 
         $this->resolving[$abstract] = true;
 
         try {
-            if ($this->isSingletonResolved($abstract)) {
+            if ($this->isSingleton($abstract)) {
+                if (!isset($this->instances[$abstract])) {
+                    $this->instances[$abstract] = $this->buildInstance($abstract, $parameters);
+                }
                 return $this->instances[$abstract];
             }
 
-            $instance = $this->resolveInstance($abstract, $parameters);
-            
-            if ($this->isSingleton($abstract)) {
-                $this->instances[$abstract] = $instance;
-            }
-
-            return $instance;
+            return $this->buildInstance($abstract, $parameters);
         } finally {
             unset($this->resolving[$abstract]);
         }
     }
 
-    public function compile(string $cacheDir): void {
-        $this->validateCompilation();
-        $code = $this->generateContainerCode();
-        $this->saveCompiledContainer($cacheDir, $code);
-	$this->isCompiled = true;
-    }
-
-    private function isSingletonResolved(string $abstract): bool {
-        return isset($this->singletons[$abstract]) 
-            && isset($this->instances[$abstract]);
-    }
-
-    private function isSingleton(string $abstract): bool {
-        return isset($this->singletons[$abstract]);
-    }
-
-    private function resolveInstance(string $abstract, array $parameters) {
+    private function buildInstance(string $abstract, array $parameters) {
         $concrete = $this->bindings[$abstract] ?? $abstract;
 
-        if (is_callable($concrete)) {
-            return $concrete($this, ...$parameters);
+        if ($concrete instanceof \Closure || is_callable($concrete)) {
+            $instance = $concrete($this, ...$parameters);
+            $this->validateInstanceType($instance, $abstract);
+            return $instance;
         }
 
-        return $this->buildClassInstance($concrete, $parameters);
-    }
+        $reflector = $this->getReflection($concrete);
+        $this->validateInstantiable($reflector);
 
-    private function buildClassInstance(string $concrete, array $parameters) {
-        $reflector = $this->getCachedReflection($concrete);
-        
         if (!$constructor = $reflector->getConstructor()) {
             return new $concrete();
         }
 
-        $dependencies = $this->resolveDependencies($constructor->getParameters(), $parameters);
-        
-        return $reflector->newInstanceArgs($dependencies);
-    }
-
-    private function resolveDependencies(array $parameters, array $userParams): array {
         $dependencies = [];
-        
-        foreach ($parameters as $param) {
-            $dependencies[] = $this->resolveParameter($param, $userParams);
-        }
-        
-        return $dependencies;
-    }
-
-    private function resolveParameter(\ReflectionParameter $param, array $userParams) {
-        $name = $param->getName();
-        $type = $param->getType();
-
-        if ($type && !$type->isBuiltin()) {
-            return $this->get($type->getName());
+        foreach ($constructor->getParameters() as $param) {
+            $dependencies[] = $this->resolveDependency($param, $parameters);
         }
 
-        return $userParams[$name] ?? $this->getDefaultValue($param);
+        $instance = $reflector->newInstanceArgs($dependencies);
+        $this->validateInstanceType($instance, $abstract);
+
+        return $instance;
     }
 
-    private function getDefaultValue(\ReflectionParameter $param) {
-        if (!$param->isDefaultValueAvailable()) {
-            throw new RuntimeException("Parameter \${$param->getName()} is required");
+    private function validateInstanceType($instance, string $abstract): void {
+        if (!$instance instanceof $abstract) {
+            $error = "Resolved instance is not of type {$abstract}";
+            $this->logError(new RuntimeException($error));
+            throw new RuntimeException($error);
         }
-        
-        return $param->getDefaultValue();
     }
 
-    private function getCachedReflection(string $class): \ReflectionClass {
+    private function getReflection(string $class): ReflectionClass {
         if (!isset($this->reflectionCache[$class])) {
             $this->validateClassExists($class);
-            $this->reflectionCache[$class] = new \ReflectionClass($class);
+            try {
+                $this->reflectionCache[$class] = new ReflectionClass($class);
+            } catch (ReflectionException $e) {
+                $this->logError($e);
+                throw new RuntimeException("Class {$class} not found");
+            }
         }
-        
         return $this->reflectionCache[$class];
     }
 
     private function validateClassExists(string $class): void {
         if (!class_exists($class) && !interface_exists($class)) {
-            throw new RuntimeException("Class or interface {$class} not found");
+            $error = "Class or interface {$class} not found";
+            $this->logError(new RuntimeException($error));
+            throw new RuntimeException($error);
         }
     }
 
+    private function validateInstantiable(ReflectionClass $reflector): void {
+        if (!$reflector->isInstantiable()) {
+            $error = "Class {$reflector->name} is not instantiable";
+            $this->logError(new RuntimeException($error));
+            throw new RuntimeException($error);
+        }
+    }
+
+    private function resolveDependency(\ReflectionParameter $param, array $parameters) {
+        $name = $param->getName();
+        $type = $param->getType();
+
+        try {
+            if ($type && !$type->isBuiltin()) {
+                return $this->get($type->getName());
+            }
+
+            if (array_key_exists($name, $parameters)) {
+                $this->validateParameterType($param, $parameters[$name]);
+                return $parameters[$name];
+            }
+
+            if ($param->isDefaultValueAvailable()) {
+                return $param->getDefaultValue();
+            }
+
+            throw new RuntimeException("Parameter \${$name} is required");
+        } catch (\Throwable $e) {
+            $this->logError($e);
+            throw $e;
+        }
+    }
+
+    private function validateParameterType(\ReflectionParameter $param, $value): void {
+        $type = $param->getType();
+        if (!$type || $type->isBuiltin()) {
+            $typeName = $type ? $type->getName() : 'mixed';
+            if ($type && !$this->isValidType($value, $typeName)) {
+                $error = sprintf(
+                    "Invalid type for parameter \$%s. Expected %s, got %s",
+                    $param->getName(),
+                    $typeName,
+                    gettype($value)
+                );
+                $this->logError(new RuntimeException($error));
+                throw new RuntimeException($error);
+            }
+        }
+    }
+
+    private function isValidType($value, string $type): bool {
+        switch ($type) {
+            case 'int':
+                return is_int($value);
+            case 'string':
+                return is_string($value);
+            case 'bool':
+                return is_bool($value);
+            case 'array':
+                return is_array($value);
+            case 'float':
+                return is_float($value);
+            case 'callable':
+                return is_callable($value);
+            case 'iterable':
+                return is_iterable($value);
+            case 'object':
+                return is_object($value);
+            default:
+                return true; // For non-builtin types
+        }
+    }
+
+    public function compile(string $cacheDir): void {
+        if (file_exists("{$cacheDir}/CompiledContainer.php")) {
+            return;
+        }
+        
+        $this->validateCompilation();
+        $code = $this->generateContainerCode();
+        $this->saveCompiledContainer($cacheDir, $code);
+        $this->isCompiled = true;
+    }
+
+    private function validateCompilation(): void {
+        foreach ($this->bindings as $abstract => $concrete) {
+            if (is_string($concrete)) {
+                $this->validateClassExists($concrete);
+            }
+        }
+    }
+
+    private function logError(\Throwable $e): void {
+        if ($this->logger) {
+            $this->logger->error($e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
+    }
     private function generateContainerCode(): string {
-        $code = "<?php \n declare(strict_types=1);\n\n";
-        $code .= "namespace MainApp\\cache;\n\n";
-        $code .= "use Core\\Container;\n\n";
+        $code = "<?php declare(strict_types=1);\n\n";
+        $code .= "namespace MainApp\Cache;\n\n";
+        $code .= "use Core\Container;\n\n";
         $code .= "class CompiledContainer extends Container {\n";
-        $code .= "    private \$compiledInstances = [];\n\n";
+        $code .= "    private array \$compiledInstances = [];\n\n";
 
         foreach ($this->bindings as $abstract => $concrete) {
             $code .= $this->generateServiceMethod($abstract, $concrete);
@@ -158,7 +257,7 @@ class Container {
     }
 
     private function generateServiceMethod(string $abstract, $concrete): string {
-        $methodName = 'get_' . str_replace('\\', '__', $abstract);
+        $methodName = 'get' . str_replace('\\', '_', $abstract);
         $isSingleton = isset($this->singletons[$abstract]);
 
         $code = "    public function {$methodName}() {\n";
@@ -169,7 +268,7 @@ class Container {
             $code .= "        }\n";
         }
 
-        if (is_callable($concrete)) {
+        if ($concrete instanceof \Closure) {
             $code .= "        \$instance = call_user_func(\$this->bindings['{$abstract}'], \$this);\n";
         } else {
             $dependencies = $this->getCompiledDependencies($concrete);
@@ -187,7 +286,7 @@ class Container {
     }
 
     private function getCompiledDependencies(string $class): string {
-        $reflector = $this->getCachedReflection($class);
+        $reflector = $this->getReflection($class);
         $dependencies = [];
         
         if ($constructor = $reflector->getConstructor()) {
@@ -203,7 +302,7 @@ class Container {
         $type = $param->getType();
         
         if ($type && !$type->isBuiltin()) {
-            return "\$this->get_{$this->normalizeClassName($type->getName())}()";
+            return "\$this->get" . str_replace('\\', '_', $type->getName()) . "()";
         }
         
         if ($param->isDefaultValueAvailable()) {
@@ -213,28 +312,18 @@ class Container {
         return 'null';
     }
 
-    private function normalizeClassName(string $class): string {
-        return str_replace('\\', '__', $class);
-    }
-
     private function saveCompiledContainer(string $cacheDir, string $code): void {
         if (!is_dir($cacheDir)) {
             mkdir($cacheDir, 0755, true);
         }
 
         $filePath = "{$cacheDir}/CompiledContainer.php";
-        file_put_contents($filePath, $code);
-
-        if (!file_exists($filePath)) {
+        if (!file_put_contents($filePath, $code)) {
             throw new RuntimeException("Failed to compile container to {$filePath}");
         }
     }
 
-    private function validateCompilation(): void {
-        foreach ($this->bindings as $abstract => $concrete) {
-            if (is_string($concrete)) {
-                $this->validateClassExists($concrete);
-            }
-        }
+    private function isSingleton(string $abstract): bool {
+        return isset($this->singletons[$abstract]);
     }
 }
