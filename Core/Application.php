@@ -53,6 +53,15 @@ class Application
             $c->get(Response::class)
         ));
 
+		$this->container->singleton(Config::class, fn() => new Config(
+			require CONFIG_DIR . '/config.php'
+		));
+
+		$this->container->bind(Cache::class, fn($c) =>  new Cache(
+			$c->get(Config::class),
+			CONFIG_DIR . '/routes.php'
+		));
+		  
         // Загрузка конфигурации DI
         $this->loadDiConfig();
 

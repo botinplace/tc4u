@@ -22,7 +22,10 @@ class Router
     {
         $this->routesFile = CONFIG_DIR . "/routes.php";
         $this->cacheFile = APP_DIR . "cache/cachroutes.php";
-        $this->cache = new Cache($this->cacheFile, $this->routesFile);
+        //$this->cache = new Cache($this->cacheFile, $this->routesFile);
+
+		$this->cache = $container->get(Cache::class);
+		
         $this->setAllowedMethods();
         $this->loadRoutesFromCache(); // Загрузка маршрутов из кэша
         $this->loadRoutesFromFile(); // В случае, если кэш не существует
@@ -82,14 +85,13 @@ class Router
                     $data["needauth"] ?? false,
                     // добавить $data["onlyforguest"] ?? false,
                     $key,
-		    $data["middlewares"] ?? [],
+					$data["middlewares"] ?? [],
                 );
                   //$this->routes[$method][$routeData["path"]] = $route;
                  $this->routes[ $singleMethod ][] = $route;
 		}
              }            
         }
-    
         $this->cache->save($this->routes);
     
     }
