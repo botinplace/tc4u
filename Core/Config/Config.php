@@ -13,9 +13,11 @@ class Config {
         // Основной файл
         self::$config = require CONFIG_DIR . 'config.php';
 
-	// Загрузка DI-конфига
-        self::$config['di'] = require CONFIG_DIR . 'di.php';
-
+		// Загрузка DI-конфига
+		if(file_exists( CONFIG_DIR . 'di.php' )){
+			self::$config['di'] = require CONFIG_DIR . 'di.php';
+		}
+		
         if (!self::$config) {
             throw new \Exception("Config not loaded properly");
         }
