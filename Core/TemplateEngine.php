@@ -474,50 +474,61 @@ PHP;
     }
 
     private function parseCondition(string $condition): string
-    {
-        $condition = preg_replace('/\bnot\s+/', '!', $condition);
-        
-        // Обработка числовых литералов
-        if (is_numeric($condition)) {
-            return $condition;
-        }
-        
-        // Обработка строковых литералов
-        if (preg_match('/^([\'"])(.*)\1$/', $condition, $matches)) {
-            return var_export($matches[2], true);
-        }
-        
-        // Булевые значения
-        $lower = strtolower($condition);
-        if ($lower === 'true') return 'true';
-        if ($lower === 'false') return 'false';
-        if ($lower === 'null') return 'null';
-        
-        // Сравнения
-        if (preg_match('/(.+?)\s*(===|!==|==|!=|>=|<=|>|<)\s*(.+)/', $condition, $matches)) {
-            $left = $this->parseConditionPart(trim($matches[1]));
-            $operator = $matches[2];
-            $right = $this->parseConditionPart(trim($matches[3]));
-            return "({$left} {$operator} {$right})";
-        }
-        
-        // Логические операторы
-        if (preg_match('/(.+?)\s*(&&|\|\|)\s*(.+)/', $condition, $matches)) {
-            $left = $this->parseConditionPart(trim($matches[1]));
-            $operator = $matches[2];
-            $right = $this->parseConditionPart(trim($matches[3]));
-            return "({$left} {$operator} {$right})";
-        }
-        
-        // Отрицания
-        if (preg_match('/^!\s*(\w+)/', $condition, $matches)) {
-            $var = $this->parseConditionPart($matches[1]);
-            return "(!{$var})";
-        }
-        
-        return $this->parseConditionPart($condition);
+{
+    $condition = preg_replace('/\bnot\s+/', '!', $condition);
+    
+    // Обработка числовых литералов
+    if (is_numeric($condition)) {
+        return $condition;
     }
     
+    // Обработка строковых литералов
+    if (preg_match('/^([\'"])(.*)\1$/', $condition, $matches)) {
+        return var_export($matches[2], true);
+    }
+    
+    // Булевые значения
+    $lower = strtolower($condition);
+    if ($lower === 'true') return 'true';
+    if ($lower === 'false') return 'false';
+    if ($lower === 'null') return 'null';
+    
+    // Специальная обработка для проверки на пустоту
+    if (preg_match('/^!\s*([a-zA-Z0-9-_.]+)$/', $condition, $matches)) {
+        $var = $this->compileVariableAccess($matches[1]);
+        return "(empty($var) || (is_array($var) && count($var) === 0))";
+    }
+    
+    // Сравнения
+    if (preg_match('/(.+?)\s*(===|!==|==|!=|>=|<=|>|<)\s*(.+)/', $condition, $matches)) {
+        $left = $this->parseConditionPart(trim($matches[1]));
+        $operator = $matches[2];
+        $right = $this->parseConditionPart(trim($matches[3]));
+        return "({$left} {$operator} {$right})";
+    }
+    
+    // Логические операторы
+    if (preg_match('/(.+?)\s*(&&|\|\|)\s*(.+)/', $condition, $matches)) {
+        $left = $this->parseConditionPart(trim($matches[1]));
+        $operator = $matches[2];
+        $right = $this->parseConditionPart(trim($matches[3]));
+        return "({$left} {$operator} {$right})";
+    }
+    
+    // Отрицания для составных выражений
+    if (preg_match('/^!\s*(\w+)/', $condition, $matches)) {
+        $var = $this->parseConditionPart($matches[1]);
+        return "(!{$var})";
+    }
+    
+    // Проверка на пустоту для неотрицательных случаев
+    if (preg_match('/^[a-zA-Z0-9-_.]+$/', $condition)) {
+        $var = $this->compileVariableAccess($condition);
+        return "(!empty($var) && (!is_array($var) || count($var) > 0))";
+    }
+    
+    return $this->parseConditionPart($condition);
+}    
     private function parseConditionPart(string $part): string
     {
         // Если часть является выражением (содержит операторы)
