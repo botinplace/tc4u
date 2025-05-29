@@ -4,184 +4,713 @@ namespace Core;
 class TemplateEngine
 {
     private $fast_array = [];
-    private $loopStack = []; // Стек для хранения контекста вложенных циклов
+    private $loopStack = [];
     private array $fileTimeCache = [];
+    private $compiledDir;
+    private $templateCache = [];
+    private $loopVarCounter = 0;
+    private bool $debugMode = false;
+    private int $maxCacheSize = 1000; // Максимальное количество кешированных файлов
+    private int $maxRecursionDepth = 10; // Максимальная глубина рекурсии для объектов
 
-    public function __construct(array $fast_array = [])
+    public function __construct(array $fast_array = [], bool $debugMode = false)
     {
+        $this->debugMode = $debugMode;
         $this->fast_array = $this->prepareExtraVars($fast_array);
+        
+        // Убедимся, что путь к кешу корректен
+        $this->compiledDir = rtrim(APP_DIR, '/') . '/cache/templates/';
+        $this->ensureCacheDirectory();
     }
 
+    private function ensureCacheDirectory(): void
+    {
+        // Создаем директорию, если она не существует
+        if (!is_dir($this->compiledDir)) {
+            if (!mkdir($this->compiledDir, 0775, true)) {
+                throw new \RuntimeException("Failed to create cache directory: " . $this->compiledDir);
+            }
+        }
+
+        // Проверяем доступность директории для записи
+        if (!is_writable($this->compiledDir)) {
+            throw new \RuntimeException("Cache directory is not writable: " . $this->compiledDir);
+        }
+    }
+    
     private function prepareExtraVars(array $extra_vars): array
     {
         $fast_array = [];
         foreach ($extra_vars as $key => $value) {
-            $fast_array["{{" . $key . "}}"] = is_scalar($value)
-                ? htmlspecialchars($value, ENT_QUOTES, "UTF-8")
-                : (is_array($value)
-                    ? $value
-                    : (is_object($value)
-                        ? "Object"
-                        : ""));
+            // Разрешаем передачу объектов только в debug режиме
+            if (is_object($value)) {
+                if ($this->debugMode) {
+                    $fast_array["{{" . $key . "}}"] = $value;
+                } else {
+                    trigger_error("Objects not allowed in production", E_USER_WARNING);
+                    $fast_array["{{" . $key . "}}"] = "Object";
+                }
+            } else {
+                $fast_array["{{" . $key . "}}"] = is_scalar($value)
+                    ? htmlspecialchars($value, ENT_QUOTES, "UTF-8")
+                    : $value;
+            }
         }
         return $fast_array;
     }
 
     public function render(string $template, array $data = []): string
     {
-        $this->fast_array = array_merge($this->fast_array, $this->prepareExtraVars($data));
-        $output = $this->replaceForeachLoop($template, $this->fast_array);
-        $output = $this->replacePlaceholders($output, $this->fast_array);
-        $output = $this->processIfConditions($output, $this->fast_array);
-        return $output;
+        try {
+            $this->fast_array = array_merge($this->fast_array, $this->prepareExtraVars($data));
+            $compiledFile = $this->compileTemplate($template);
+            return $this->renderCompiled($compiledFile);
+        } catch (\Throwable $e) {
+            $errorMsg = "Template error: " . $e->getMessage();
+            error_log($errorMsg);
+            
+            if ($this->debugMode) {
+                return "<!-- ERROR: " . htmlspecialchars($errorMsg) . " -->";
+            }
+            
+            return "<!-- Template rendering error -->";
+        }
     }
 
-    private function replacePlaceholders(
-        string $output,
-        array $fast_array,
-        bool $inLoop = false
-    ): string {
-        //old: "/\\\\?{\\{?(\s*[a-zA-Z0-9-_.]*\s*)[|]?(\s*[a-zA-Z0-9]*\s*)\\}?\\}/sm",
-        return preg_replace_callback(
-            "/\\\\?{\\{?(\s*[a-zA-Z0-9-_.()\/\"'\\s]*\s*)[|]?(\s*[a-zA-Z0-9]*\s*)\\}?\\}/sm",            
-            function ($matches) use ($fast_array, $inLoop) {
-                if ((strpos($matches[0], '\\') === 0)) {
-                    return "{{" . $matches[1] . "}}";
-                }
-                $matches[1] = trim($matches[1]);
-                return $this->resolvePlaceholder($matches, $fast_array);
+   private function compileTemplate(string $template): string
+    {
+        $hash = md5($template);
+        $cacheFile = $this->compiledDir . $hash . '.php';
+        
+        // Проверяем необходимость компиляции
+        $needsCompile = $this->debugMode || !file_exists($cacheFile);
+        
+        // Для существующих файлов проверяем актуальность
+        if (!$needsCompile && !$this->debugMode) {
+            $sourceMTime = $this->getTemplateMTime($template);
+            $cacheMTime = filemtime($cacheFile);
+            $needsCompile = $sourceMTime > $cacheMTime;
+        }
+        
+        if ($needsCompile) {
+            $compiled = $this->compile($template);
+            $this->atomicWrite($cacheFile, $compiled);
+        }
+        
+        return $cacheFile;
+    }
+    
+    private function getTemplateMTime(string $template): int
+    {
+        // В реальной реализации нужно определить время модификации шаблона
+        return time(); // Заглушка
+    }
+    
+    private function atomicWrite(string $filePath, string $content): void
+    {
+        // Создаем временный файл В ТОЙ ЖЕ директории
+        $tempFile = $this->compiledDir . uniqid('tpl_', true);
+        
+        // Записываем содержимое во временный файл
+        if (file_put_contents($tempFile, $content) === false) {
+            throw new \RuntimeException("Failed to write to temp file: $tempFile");
+        }
+        
+        // Атомарное переименование
+        if (!rename($tempFile, $filePath)) {
+            @unlink($tempFile);
+            throw new \RuntimeException("Failed to rename temp file to: $filePath");
+        }
+        
+        // Устанавливаем корректные права
+        @chmod($filePath, 0664);
+    }
+    
+    private function logError(string $message): void
+    {
+        error_log("[TemplateEngine] " . $message);
+        if ($this->debugMode) {
+            // Можно добавить вывод в лог или на экран в режиме отладки
+        }
+    }
+    
+    // Автоматическая очистка кеша
+    private function cleanupCache(): void
+    {
+        if ($this->debugMode) return;
+        
+        $files = glob($this->compiledDir . '*.php');
+        if (count($files) > $this->maxCacheSize) {
+            // Сортируем по времени модификации
+            usort($files, function($a, $b) {
+                return filemtime($a) > filemtime($b);
+            });
+            
+            // Удаляем самые старые файлы
+            $toDelete = count($files) - $this->maxCacheSize;
+            for ($i = 0; $i < $toDelete; $i++) {
+                @unlink($files[$i]);
+            }
+        }
+    }
+
+    private function compile(string $template): string
+    {
+        $this->loopVarCounter = 0;
+        
+        // Шаг 1: Замена экранированных тегов
+        $template = preg_replace_callback(
+            '/\\\\(\{\{|\{%|%\\})/',
+            function ($matches) {
+                $markers = [
+                    '{{' => '__ESCAPED_DOUBLE__',
+                    '{%' => '__ESCAPED_BLOCK_START__',
+                    '%}' => '__ESCAPED_BLOCK_END__'
+                ];
+                return $markers[$matches[1]] ?? $matches[0];
             },
-            $output
+            $template
+        );
+        
+        $passes = 3;
+        do {
+            $previous = $template;
+            $template = $this->compileForeach($template);
+            $template = $this->compilePlaceholders($template);
+            $template = $this->compileIfConditions($template);
+        } while ($passes-- > 0 && $template !== $previous);
+        
+        // Шаг 2: Восстановление экранированных тегов
+        $template = preg_replace_callback(
+            '/__(ESCAPED_[A-Z_]+)__/',
+            function ($matches) {
+                $reverseMap = [
+                    'ESCAPED_DOUBLE' => '{{',
+                    'ESCAPED_BLOCK_START' => '{%',
+                    'ESCAPED_BLOCK_END' => '%}'
+                ];
+                return $reverseMap[$matches[1]] ?? $matches[0];
+            },
+            $template
+        );
+        
+        return $template;
+    }
+
+    private function compileForeach(string $template): string
+    {
+        $pattern = '/{%\s*foreach\s+([a-zA-Z0-9-_.]+)\s*%}(.*?){%\s*endforeach\s*%}/s';
+        return preg_replace_callback(
+            $pattern,
+            function ($matches) {
+                $var = trim($matches[1]);
+                $content = $this->compile($matches[2]);
+                $varAccess = $this->compileVariableAccess($var);
+                
+                $this->loopVarCounter++;
+                $keyVar = "key_{$this->loopVarCounter}";
+                $valueVar = "value_{$this->loopVarCounter}";
+
+                return <<<PHP
+<?php
+\$parentLoopContext = end(\$this->loopStack) ?: null;
+\$loopData = {$varAccess} ?? [];
+foreach (\$loopData as \${$keyVar} => \${$valueVar}) {
+    \$currentLoopContext = [
+        'key' => \${$keyVar},
+        'value' => \${$valueVar},
+        'parent' => \$parentLoopContext
+    ];
+    array_push(\$this->loopStack, \$currentLoopContext);
+    ?>
+    {$content}
+    <?php
+    array_pop(\$this->loopStack);
+}
+?>
+PHP;
+            },
+            $template
         );
     }
 
-    private function replaceForeachLoop(string $output, array $fast_array): string
+    private function compileVariableAccess(string $var): string
+    {
+        // Обработка констант
+        if (is_numeric($var)) {
+            return $var;
+        }
+        
+        // Обработка строковых литералов
+        if (preg_match('/^([\'"])(.*)\1$/', $var, $matches)) {
+            return var_export($matches[2], true);
+        }
+        
+        // Приоритет: переменные цикла
+        if (!empty($this->loopStack)) {
+            if ($var === 'key') {
+                return "\$this->getCurrentLoopContext('key')";
+            }
+            
+            if ($var === 'value') {
+                return "\$this->getCurrentLoopContext('value')";
+            }
+            
+            // Обработка value.property
+            if (strpos($var, 'value.') === 0) {
+                $property = substr($var, 6);
+                return "\$this->getNestedValue(\$this->getCurrentLoopContext('value'), '$property')";
+            }
+            
+            // Обработка parent.value
+            if (strpos($var, 'parent.') === 0) {
+                $levels = substr_count($var, 'parent.');
+                $property = substr($var, strrpos($var, '.') + 1);
+                return "\$this->getValueFromParentLoop('{$property}', {$levels})";
+            }
+        }
+        
+        return "\$this->getValue('$var')";
+    }
+    
+    
+    public function getValue(string $key)
+    {
+        // Приоритет: переменные цикла
+        if (!empty($this->loopStack)) {
+            if ($key === 'key') {
+                return $this->getCurrentLoopContext('key');
+            }
+            
+            if ($key === 'value') {
+                return $this->getCurrentLoopContext('value');
+            }
+            
+            if (strpos($key, 'value.') === 0) {
+                $property = substr($key, 6);
+                return $this->getNestedValue(
+                    $this->getCurrentLoopContext('value'), 
+                    $property
+                );
+            }
+            
+            if (strpos($key, 'parent.') === 0) {
+                $levels = substr_count($key, 'parent.');
+                $property = substr($key, strrpos($key, '.') + 1);
+                return $this->getValueFromParentLoop($property, $levels);
+            }
+        }
+
+        // Обработка глобальных переменных
+        $keys = explode('.', $key);
+        $current = $this->fast_array;
+        
+        // Основное исправление: используем обёрнутый ключ для первого уровня
+        $firstKey = array_shift($keys);
+        $wrappedKey = "{{" . $firstKey . "}}";
+        
+        if (!isset($current[$wrappedKey])) {
+            return null;
+        }
+        
+        $current = $current[$wrappedKey];
+        
+        // Обрабатываем вложенные свойства
+        foreach ($keys as $k) {
+            if (is_array($current)) {
+                if (isset($current[$k])) {
+                    $current = $current[$k];
+                } 
+                elseif (is_numeric($k) && isset($current[(int)$k])) {
+                    $current = $current[(int)$k];
+                } else {
+                    return null;
+                }
+            }
+            elseif (is_object($current)) {
+                if (property_exists($current, $k)) {
+                    $current = $current->$k;
+                } else {
+                    return null;
+                }
+            }
+            else {
+                return null;
+            }
+        }
+        
+        return $current;
+    }
+
+    public function getCurrentLoopContext(string $key)
+    {
+        if (empty($this->loopStack)) {
+            return null;
+        }
+        $context = end($this->loopStack);
+        return $context[$key] ?? null;
+    }
+
+    public function getValueFromParentLoop(string $property)
+    {
+        $stackSize = count($this->loopStack);
+        if ($stackSize > 1) {
+            $context = $this->loopStack[$stackSize - 2]; // Берем родительский контекст
+            return $this->getNestedValue($context['value'], $property);
+        }
+        return null;
+    }
+
+
+    private function compilePlaceholders(string $template): string
     {
         return preg_replace_callback(
-            "/\\\\?{%\s*foreach\s+([a-zA-Z0-9-_.]*)\s*%}((?:(?R)|.*?)*){%\s*endforeach\s*%}/sm",
-            function ($matches) use ($fast_array) {
-                if (strpos($matches[0], '\\') === 0) {
-                    return ltrim($matches[0], '\\');
+            '/(?<!\\\\){{(\s*[a-zA-Z0-9-_.()\/"\'\\\\\s\+\-\*\%]+)(?:\s*\|\s*([a-zA-Z0-9]+))?\s*}}/',
+            function ($matches) {
+                $var = trim($matches[1]);
+                $filter = $matches[2] ?? null;
+                
+                // Пропускаем экранированные конструкции
+                if (strpos($var, 'ESCAPED_') === 0) {
+                    return '{{' . $matches[1] . '}}';
                 }
-                return $this->processForeach($matches, $fast_array);
+                
+                // Обработка строковых литералов
+                if (preg_match('/^([\'"])(.*)\1$/', $var, $stringMatches)) {
+                    $stringValue = $stringMatches[2];
+                    return "<?php echo \$this->applyFilter('$stringValue', " . ($filter ? "'$filter'" : 'null') . "); ?>";
+                }
+                
+                // Обработка выражений
+                if (preg_match('/[+\-*\/%]/', $var)) {
+                    $expression = '';
+                    $tokens = preg_split('/([+\-*\/%()])/', $var, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
+                    
+                    foreach ($tokens as $token) {
+                        $token = trim($token);
+                        if (empty($token)) continue;
+                        
+                        if (is_numeric($token) || in_array($token, ['+', '-', '*', '/', '%', '(', ')'])) {
+                            $expression .= $token;
+                        } else {
+                            $expression .= $this->compileVariableAccess($token);
+                        }
+                    }
+                    
+                    $varCode = "($expression)";
+                    
+                } else {
+                    $varCode = $this->compileVariableAccess($var);
+                }
+                
+                return "<?php echo \$this->applyFilter($varCode, " . ($filter ? "'$filter'" : 'null') . "); ?>";
             },
-            $output
+            $template
         );
+    }
+                        
+/* OLD
+    private function compilePlaceholders(string $template): string
+    {
+        return preg_replace_callback(
+            '/(?<!\\\\){{(\s*[a-zA-Z0-9-_.()\/"\'\\\\\s\+\-\*\%]+)(?:\s*\|\s*([a-zA-Z0-9]+))?\s*}}/',
+            function ($matches) {
+                $var = trim($matches[1]);
+                $filter = $matches[2] ?? null;
+                
+                // Пропускаем экранированные конструкции
+                if (strpos($var, 'ESCAPED_') === 0) {
+                    return '{{' . $matches[1] . '}}';
+                }
+                
+                if (preg_match('/[+\-*\/%]/', $var)) {
+                    $expression = '';
+                    $tokens = preg_split('/([+\-*\/%()])/', $var, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
+                    
+                    foreach ($tokens as $token) {
+                        $token = trim($token);
+                        if (empty($token)) continue;
+                        
+                        if (is_numeric($token) || in_array($token, ['+', '-', '*', '/', '%', '(', ')'])) {
+                            $expression .= $token;
+                        } else {
+                            $expression .= $this->compileVariableAccess($token);
+                        }
+                    }
+                    
+                    $varCode = "($expression)";
+                } else {
+                    $varCode = $this->compileVariableAccess($var);
+                }
+                
+                return "<?php echo \$this->applyFilter($varCode, " . ($filter ? "'$filter'" : 'null') . "); ?>";
+            },
+            $template
+        );
+    }
+*/ 
+    private function compileIfConditions(string $template): string
+    {
+        $pattern = '/{%\s*if\s+(?<condition>.+?)\s*%}(?<if_content>.*?)(?:{%\s*else\s*%}(?<else_content>.*?))?{%\s*endif\s*%}/s';
+        
+        return preg_replace_callback(
+            $pattern,
+            function ($match) {
+                $condition = trim($match['condition']);
+                $ifContent = $this->compile($match['if_content']);
+                $elseContent = isset($match['else_content']) 
+                    ? $this->compile($match['else_content']) 
+                    : '';
+
+                $conditionCode = $this->parseCondition($condition);
+
+                return "<?php if ({$conditionCode}): ?>\n" 
+                     . $ifContent 
+                     . ($elseContent ? "<?php else: ?>\n" . $elseContent : "") 
+                     . "<?php endif; ?>";
+            },
+            $template
+        );
+    }
+
+    private function parseCondition(string $condition): string
+    {
+        $condition = preg_replace('/\bnot\s+/', '!', $condition);
+        
+        // Обработка числовых литералов
+        if (is_numeric($condition)) {
+            return $condition;
+        }
+        
+        // Обработка строковых литералов
+        if (preg_match('/^([\'"])(.*)\1$/', $condition, $matches)) {
+            return var_export($matches[2], true);
+        }
+        
+        // Булевые значения
+        $lower = strtolower($condition);
+        if ($lower === 'true') return 'true';
+        if ($lower === 'false') return 'false';
+        if ($lower === 'null') return 'null';
+        
+        // Сравнения
+        if (preg_match('/(.+?)\s*(===|!==|==|!=|>=|<=|>|<)\s*(.+)/', $condition, $matches)) {
+            $left = $this->parseConditionPart(trim($matches[1]));
+            $operator = $matches[2];
+            $right = $this->parseConditionPart(trim($matches[3]));
+            return "({$left} {$operator} {$right})";
+        }
+        
+        // Логические операторы
+        if (preg_match('/(.+?)\s*(&&|\|\|)\s*(.+)/', $condition, $matches)) {
+            $left = $this->parseConditionPart(trim($matches[1]));
+            $operator = $matches[2];
+            $right = $this->parseConditionPart(trim($matches[3]));
+            return "({$left} {$operator} {$right})";
+        }
+        
+        // Отрицания
+        if (preg_match('/^!\s*(\w+)/', $condition, $matches)) {
+            $var = $this->parseConditionPart($matches[1]);
+            return "(!{$var})";
+        }
+        
+        return $this->parseConditionPart($condition);
+    }
+    
+    private function parseConditionPart(string $part): string
+    {
+        // Если часть является выражением (содержит операторы)
+        if (preg_match('/[+\-*\/%()]/', $part)) {
+            $expression = '';
+            $tokens = preg_split('/([+\-*\/%()])/', $part, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
+            
+            foreach ($tokens as $token) {
+                $token = trim($token);
+                if (empty($token)) continue;
+                
+                if (is_numeric($token) || in_array($token, ['+', '-', '*', '/', '%', '(', ')'])) {
+                    $expression .= $token;
+                } else {
+                    $expression .= $this->compileVariableAccess($token);
+                }
+            }
+            
+            return "($expression)";
+        }
+        
+        return $this->compileVariableAccess($part);
+    }
+
+    private function renderCompiled(string $compiledFile): string
+    {
+        if (!file_exists($compiledFile)) {
+            throw new \RuntimeException("Compiled template not found: $compiledFile");
+        }
+        
+        $_tmpVar = $this->fast_array;
+        ob_start();
+        include $compiledFile;
+        $output = ob_get_clean();
+        $this->loopStack = [];
+        return $output;
     }
 
     private function getValueFromFastArray(string $key, array $fast_array)
     {
-        $keys = explode('.', $key);
-        $value = $fast_array;
+        // Приоритет: переменные цикла
+        if (!empty($this->loopStack)) {
+            if ($key === 'key') {
+                return $this->getCurrentLoopContext('key');
+            }
+            
+            if ($key === 'value') {
+                return $this->getCurrentLoopContext('value');
+            }
+            
+            if (strpos($key, 'value.') === 0) {
+                $property = substr($key, 6);
+                return $this->getNestedValue(
+                    $this->getCurrentLoopContext('value'), 
+                    $property
+                );
+            }
+            
+            if (strpos($key, 'parent.') === 0) {
+                $property = substr($key, 7);
+                return $this->getValueFromParentLoop($property);
+            }
+        }
 
-        foreach ($keys as $k) {
-            if (isset($value["{{" . $k . "}}"])) {
-                $value = $value["{{" . $k . "}}"];
-            } elseif (isset($value[$k])) {
-                $value = $value[$k];
+        // Обработка глобальных переменных
+        $keys = explode('.', $key);
+        $current = $fast_array;
+        
+        foreach ($keys as $index => $k) {
+            if ($index === 0) {
+                $wrappedKey = "{{" . $k . "}}";
+                if (isset($current[$wrappedKey])) {
+                    $current = $current[$wrappedKey];
+                    continue;
+                }
+            }
+            
+            if (isset($current[$k])) {
+                $current = $current[$k];
+            }
+            elseif (is_array($current) && is_numeric($k) && isset($current[(int)$k])) {
+                $current = $current[(int)$k];
             } else {
                 return null;
             }
         }
-
-        return $value;
+        
+        return $current;
     }
  
-private function resolvePlaceholder(array $matches, array $fast_array): string
-{
-    $filter = trim($matches[2]) ?? false;
-    $key = trim($matches[1]);
-
-    // Обработка функции FilePath
-    if (strpos($key, 'FilePath(') === 0) {
-        return $this->processFilePathFunction($key, $filter);
-    }
-    
-    // Проверяем доступ к родительским значениям через .parent
-    if (strpos($key, 'parent.') === 0) {
-        $levels = substr_count($key, 'parent.');
-        $originalKey = substr($key, strrpos($key, '.') + 1);
-        
-        // Получаем значение из стека циклов
-        if (count($this->loopStack) >= $levels) {
-            $loopContext = $this->loopStack[count($this->loopStack) - $levels];
-            
-            if ($originalKey === 'key') {
-                $value = $loopContext['key'];
-            } elseif ($originalKey === 'value') {
-                $value = $loopContext['value'];
-            } else {
-                // Обработка вложенных свойств родительского value
-                $value = $this->getNestedValue($loopContext['value'], $originalKey);
-            }
-            
-            return $this->applyFilter($value, $filter);
-        }
-        
-        return "{{" . $key . "}}";
-    }
-
-    // Обычный плейсхолдер
-    $value = $this->getValueFromFastArray($key, $fast_array);
-
-    if ($value === null) {
-        return "{{" . $key . "}}";
-    }
-
-    return $this->applyFilter($value, $filter);
-}
-    
-private function getNestedValue($value, $path)
-{
-    if (empty($path)) {
-        return $value;
-    }
-
-    $keys = explode('.', $path);
-        foreach ($keys as $k) {
-        if (is_array($value) && array_key_exists($k, $value)) {
-            $value = $value[$k];
-        } elseif (is_object($value) && property_exists($value, $k)) {
-            $value = $value->$k;
-        } else {
+    private function getNestedValue($data, $path)
+    {
+        if ($depth > $this->maxRecursionDepth) {
+            trigger_error("Max recursion depth exceeded", E_USER_WARNING);
             return null;
         }
         
-        // Преобразуем строковые булевые значения
-        if (is_string($value)) {
-            $lowerVal = strtolower($value);
-            if ($lowerVal === 'true') return true;
-            if ($lowerVal === 'false') return false;
+        if (empty($path)) return $data;
+        
+        $keys = explode('.', $path);
+        
+        foreach ($keys as $key) {
+            if (is_array($data)) {
+                $wrappedKey = "{{" . $key . "}}";
+                
+                if (isset($data[$wrappedKey])) {
+                    $data = $data[$wrappedKey];
+                } 
+                elseif (isset($data[$key])) {
+                    $data = $data[$key];
+                } 
+                elseif (is_numeric($key) && isset($data[(int)$key])) {
+                    $data = $data[(int)$key];
+                } else {
+                    return null;
+                }
+            }
+            elseif (is_object($data)) {
+                
+                $className = get_class($data);
+                if (in_array($className, ['PDO', 'mysqli'])) {
+                    trigger_error("Access to database objects is forbidden", E_USER_WARNING);
+                    return null;
+                }
+                
+                if (property_exists($data, $key)) {
+                    $reflection = new \ReflectionProperty($data, $key);
+                    if ($reflection->isPublic()) {
+                        $data = $data->$key;
+                    } else {
+                        return null;
+                    }
+                } else {
+                    return null;
+                }
+                
+            }
+            else {
+                return null;
+            }
+            
+            $depth++;
+            if ($depth > $this->maxRecursionDepth) {
+                trigger_error("Max recursion depth exceeded", E_USER_WARNING);
+                return null;
+            }
+            
+        }
+        
+        return $data;
+    }
+
+    public function clearCache(int $maxAge = 86400): void
+    {
+        $files = glob($this->compiledDir . '*.php');
+        $now = time();
+        
+        foreach ($files as $file) {
+            if (is_file($file)) {
+                $fileAge = $now - filemtime($file);
+                if ($fileAge > $maxAge) {
+                    @unlink($file);
+                }
+            }
         }
     }
     
-    return $value;
-}
-
-    private function getValueForForeach(string $key, array $fast_array)
-{
-    // Если ключ содержит точку (например, value.permissions)
-    if (strpos($key, '.') !== false) {
-        $parts = explode('.', $key);
-        $firstPart = array_shift($parts);
-        
-        // Проверяем текущий контекст цикла
-        if (!empty($this->loopStack) && ($firstPart === 'key' || $firstPart === 'value')) {
-            $currentLoop = end($this->loopStack);
-            $value = $currentLoop[$firstPart];
-            
-            foreach ($parts as $part) {
-                $value = $this->getNestedValue($value, $part);
-                if ($value === null) break;
-            }
-            
-            return $value;
+    public function applyFilter($value, ?string $filter = null)
+    {
+        $valueType = gettype($value);
+        if ($valueType === 'array' || $valueType === 'object') {
+            $result = print_r($value, true);
+            return $filter === "html" ? $result : htmlspecialchars($result, ENT_QUOTES, "UTF-8");
         }
-    }
 
-    // Если это обычный ключ из fast_array
-    return $this->getValueFromFastArray($key, $fast_array);
-}
+        if ($value === null) {
+            return '';
+        }
+
+        if ($valueType === 'boolean') {
+            return $value ? 'true' : 'false';
+        }
+
+        if ($filter === "filetime") {
+            return $this->applyFileTimeFilter($value);
+        }
+        
+        if ($filter === "html") {
+            return html_entity_decode($value);
+        }
+        
+        return htmlspecialchars($value ?? '', ENT_QUOTES, "UTF-8");
+    }
 
     private function applyFileTimeFilter(string $path): string
     {
@@ -189,7 +718,6 @@ private function getNestedValue($value, $path)
             return $this->fileTimeCache[$path];
         }
     
-        // Нормализация пути
         $normalizedPath = ltrim(str_replace(['../', '..\\'], '', $path), '/');
         $absolutePath = PUBLIC_DIR . '/' . $normalizedPath;
     
@@ -202,401 +730,4 @@ private function getNestedValue($value, $path)
         $this->fileTimeCache[$path] = $result;
         return $result;
     }
-    
-    private function applyFilter($value, $filter)
-    {
-        if ($filter === "filetime") {
-            return $this->applyFileTimeFilter($value);
-        }
-        
-        if (is_array($value)) {
-            return "Array";
-        }
-        if (is_object($value)) {
-            return "Object";
-        }
-        
-        if ($filter !== "html") {
-            $value = preg_replace('/\{%(\s*)if/', '\{%$1if', $value);
-        }
-        
-        return $filter === "html"
-            ? html_entity_decode($value)
-            : htmlspecialchars(html_entity_decode($value), ENT_QUOTES, "UTF-8");
-    }
-
-private function processFilePathFunction(string $key, $filter): string
-{
-    // 1. Проверка закрывающей скобки
-    if (substr($key, -1) !== ')') {
-        error_log("Template syntax error: Missing closing parenthesis in FilePath(): {{$key}}");
-        return "{{" . $key . "}}";
-    }
-
-    // 2. Извлечение содержимого скобок
-    $content = substr($key, 9, -1);
-    if ($content === false) {
-        error_log("Template syntax error: Empty FilePath()");
-        return "{{" . $key . "}}";
-    }
-
-    // 3. Проверка пустого пути
-    $path = trim($content);
-
-    if ((strpos($path, '"') === 0 && strrpos($path, '"') === strlen($path)-1)) {
-        $path = trim($path, '"');
-    } elseif ((strpos($path, "'") === 0 && strrpos($path, "'") === strlen($path)-1)) {
-        $path = trim($path, "'");
-    }
-    
-    if (empty($path)) {
-        error_log("Template error: Empty path in FilePath()");
-        return "{{" . $key . "}}";
-    }
-
-    // 4. Проверка корректности пути (базовая защита)
-    if (strpos($path, '..') !== false || strpos($path, "\0") !== false) {
-        error_log("Template security error: Invalid path in FilePath(): " . $path);
-        return "{{" . $key . "}}";
-    }
-
-    // 5. Применение фильтра
-    return $this->applyFilter($path, $filter);
-}
-private function processLoopContent(string $content, $value, $key, array $fast_array): string
-{
-    // Сначала обрабатываем вложенные циклы
-    $processedContent = $this->replaceForeachLoop($content, $fast_array);
-    
-    // Затем заменяем плейсхолдеры
-    $processedContent = $this->replaceLoopPlaceholders($processedContent, $value, $key);
-    
-    // Обрабатываем условия
-    $processedContent = $this->processIfConditions($processedContent, $fast_array);
-    
-    return $processedContent;
-}
-
-private function processForeach(array $matches, array $fast_array): string
-{
-    $arrayKey = trim($matches[1]);
-    $content = $matches[2];
-    $output = "";
-
-    // Получаем значение для цикла
-    $loopValue = $this->getValueForForeach($arrayKey, $fast_array);
-
-    if (empty($loopValue) || !is_array($loopValue)) {
-        return "";
-    }
-
-    // Создаем новый контекст цикла
-    $loopContext = [
-        'key' => null,
-        'value' => null,
-        'parent' => !empty($this->loopStack) ? end($this->loopStack) : null
-    ];
-    
-    // Добавляем контекст в стек
-    array_push($this->loopStack, $loopContext);
-
-    foreach ($loopValue as $key => $value) {
-        // Обновляем ТОЛЬКО текущий контекст цикла (не затрагивая родительские)
-        $currentContextIndex = count($this->loopStack) - 1;
-        $this->loopStack[$currentContextIndex]['key'] = $key;
-        $this->loopStack[$currentContextIndex]['value'] = $value;
-
-        // Обрабатываем содержимое цикла
-        $loopContent = $this->processLoopContent($content, $value, $key, $fast_array);
-        $output .= $loopContent;
-    }
-
-    // Удаляем текущий контекст из стека
-    array_pop($this->loopStack);
-
-    return $output;
-}
-
-private function replaceLoopPlaceholders(
-    string $content,
-    $value,
-    $key
-): string {
-    // Обрабатываем текущий контекст (разные варианты написания)
-    $content = preg_replace_callback(
-        '/{{\s*key\s*}}/i',
-        function() use ($key) {
-            return htmlspecialchars($key, ENT_QUOTES, "UTF-8");
-        },
-        $content
-    );
-
-    $content = preg_replace_callback(
-        '/{{\s*value\s*}}/i',
-        function() use ($value) {
-            if (is_array($value)) {
-                return "Array";
-            }
-            
-            if (is_object($value)) {
-                return "Object";
-            }
-            return htmlspecialchars($value, ENT_QUOTES, "UTF-8");
-        },
-        $content
-    );
-
-    // Обрабатываем вложенные свойства value (с пробелами и без)
-    $content = preg_replace_callback(
-        '/{{\s*value\.([a-zA-Z0-9_.-]+)\s*}}/i',
-        function ($matches) use ($value) {
-            $nestedValue = $this->getNestedValue($value, $matches[1]);
-            if (is_array($nestedValue)) {
-                return "Array";
-            }
-            if (is_object($nestedValue)) {
-                return "Object";
-            }
-            return $nestedValue !== null 
-                ? htmlspecialchars($nestedValue, ENT_QUOTES, "UTF-8")
-                : $matches[0];
-        },
-        $content
-    );
-
-    // Обрабатываем parent контекст, если он есть
-    if (!empty($this->loopStack)) {
-        $currentIndex = count($this->loopStack) - 1;
-        
-        // Обработка parent.key (с пробелами и без)
-        if ($currentIndex > 0) {
-            $parentContext = $this->loopStack[$currentIndex - 1];
-            $content = preg_replace_callback(
-                '/{{\s*parent\.key\s*}}/i',
-                function() use ($parentContext) {
-                    return htmlspecialchars($parentContext['key'], ENT_QUOTES, "UTF-8");
-                },
-                $content
-            );
-        }
-        
-        // Обработка parent.value.property (с пробелами и без)
-        $content = preg_replace_callback(
-            '/{{\s*parent\.value\.([a-zA-Z0-9_.-]+)\s*}}/i',
-            function ($matches) use ($currentIndex) {
-                if ($currentIndex > 0) {
-                    $parentContext = $this->loopStack[$currentIndex - 1];
-                    $nestedValue = $this->getNestedValue($parentContext['value'], $matches[1]);
-                    if (is_array($nestedValue)) {
-                        return "Array";
-                    }
-                    if (is_object($nestedValue)) {
-                        return "Object";
-                    }
-                    return $nestedValue !== null 
-                        ? htmlspecialchars($nestedValue, ENT_QUOTES, "UTF-8")
-                        : '';
-                }
-                return '';
-            },
-            $content
-        );
-    }
-
-    return $content;
-}
-
-private function processIfConditions(
-    string $content,
-    array $fast_array
-): string {
-    $pattern = '/
-        (\\\\?{%\s*if\s+(?<condition>.*?)\s*%})  # Условие if
-        (?<if_content>                       # Содержимое блока if
-            (?:                              # Повторяем:
-                (?!                          # Пока не встретим else или endif
-                    {%\s*(?:else|endif)\s*%}
-                )
-                (?:
-                    (?R)                     # Рекурсивно включаем вложенные if блоки
-                    |                        # Или любой символ
-                    .
-                )
-            )*
-        )
-        (?:                                 # Опциональный блок else
-            {%\s*else\s*%}
-            (?<else_content>                # Содержимое блока else
-                (?:                         
-                    (?!                      # Пока не встретим endif
-                        {%\s*endif\s*%}
-                    )
-                    (?:
-                        (?R)                 # Рекурсивно включаем вложенные if блоки
-                        |                    # Или любой символ
-                        .
-                    )
-                )*
-            )
-        )?
-        {%\s*endif\s*%}                     # Конец блока
-    /isx';
-
-    $result = preg_replace_callback(
-        $pattern,
-        function ($matches) use ($fast_array) {
-            
-            if (strpos($matches[1], '\\') === 0) {
-                // Возвращаем оригинал без экранирующего слеша
-                return substr($matches[0], 1);
-            }
-            
-            $condition = trim($matches['condition']);
-            $ifContent = $matches['if_content'] ?? '';
-            $elseContent = $matches['else_content'] ?? '';
-
-            // Обработка условия
-            $negation = false;
-            if (strpos($condition, '!') === 0) {
-                $negation = true;
-                $condition = trim(substr($condition, 1));
-            }
-
-            // Получение значения для сравнения
-            $value = $this->getValueForComparison($condition, $fast_array);
-            $conditionResult = $this->evaluateCondition($value, !$negation);
-
-            // Выбор соответствующего контента
-            $outputContent = $conditionResult ? $ifContent : $elseContent;
-
-            // Рекурсивная обработка вложенных условий
-            return $this->processIfConditions($outputContent, $fast_array);
-        },
-        $content
-    );
-
-    return $result ?? $content;
-}
-    
-private function evaluateCondition($value, bool $expected): bool
-{
-    // Явная проверка булевых значений
-    if (is_bool($value)) {
-        return $expected ? $value : !$value;
-    }
-
-    // Оригинальная логика для других типов
-    return $expected 
-        ? !empty($value) || $value === "true" || $value === 1 || $value === "1"
-        : empty($value) || $value === "false" || $value === 0 || $value === "0";
-}
-
-
-    private function getValueForComparison($variable, array $fast_array)
-{
-    // Удаляем лишние пробелы и кавычки
-    //$variable = trim($variable, " \t\n\r\0\x0B\"'");
-    
-    // Обработка строк в кавычках (например, "completed")
-    if (preg_match('/^["\'](.+)["\']$/', $variable, $matches)) {
-        return $matches[1];
-    }
-    
-
-    // Обработка операторов сравнения (==, !=, >, < и т.д.)
-    if (preg_match('/^(.+?)\s*(==|!=|>=|<=|>|<)\s*(.+)$/', $variable, $matches)) {
-        $leftOperand = $this->getValueForComparison(trim($matches[1]), $fast_array);
-        $operator = trim($matches[2]);
-        $rightOperand = $this->getValueForComparison(trim($matches[3]), $fast_array);
-
-        switch ($operator) {
-            case '==': return $leftOperand == $rightOperand;
-            case '!=': return $leftOperand != $rightOperand;
-            case '>': return $leftOperand > $rightOperand;
-            case '<': return $leftOperand < $rightOperand;
-            case '>=': return $leftOperand >= $rightOperand;
-            case '<=': return $leftOperand <= $rightOperand;
-            default: return false;
-        }
-    }
-
-    // Проверка булевых значений
-    if ($variable === 'true') return true;
-    if ($variable === 'false') return false;
-    
-    // Проверка числовых значений
-    if (is_numeric($variable)) {
-        return $variable + 0;
-    }
-
-    // Проверка доступа к родительским значениям через .parent
-    if (strpos($variable, 'parent.') === 0) {
-        $levels = substr_count($variable, 'parent.');
-        $originalKey = substr($variable, strrpos($variable, '.') + 1);
-        
-        if (count($this->loopStack) >= $levels) {
-            $loopContext = $this->loopStack[count($this->loopStack) - $levels];
-            
-            if ($originalKey === 'key') {
-                return $loopContext['key'];
-            } elseif ($originalKey === 'value') {
-                return $loopContext['value'];
-            } else {
-                return $this->getNestedValue($loopContext['value'], $originalKey);
-            }
-        }
-        return $variable;
-    }
-
-    // Проверка текущего контекста цикла
-    if (!empty($this->loopStack)) {
-        $currentLoop = end($this->loopStack);
-        
-        if ($variable === 'key') {
-            return $currentLoop['key'];
-        } elseif ($variable === 'value') {
-            return $currentLoop['value'];
-        }
-    }
-
-    // Обработка вложенных свойств (например, order.status)
-    if (strpos($variable, '.') !== false) {
-        $keys = explode('.', $variable);
-        $firstKey = array_shift($keys);
-        
-        // Проверка в контексте цикла
-        if (!empty($this->loopStack) && ($firstKey === 'key' || $firstKey === 'value')) {
-            $currentLoop = end($this->loopStack);
-            $value = $currentLoop[$firstKey];
-            
-            foreach ($keys as $k) {
-                $value = $this->getNestedValue($value, $k);
-                if ($value === null) break;
-            }
-            return $value;
-        }
-        
-        
-        // Проверка в fast_array
-           $value = $this->getValueFromFastArray($variable, $fast_array);
-    
-        if (is_string($value)) {
-            // Преобразуем строковые 'true'/'false' в boolean
-            $lowerValue = strtolower($value);
-            if ($lowerValue === 'true') return true;
-            if ($lowerValue === 'false') return false;
-        }
-        
-        return $value;
-       }
-
-  if (isset($fast_array["{{" . $variable . "}}"])) {
-        return $fast_array["{{" . $variable . "}}"];
-    }
-
-    // Если переменная не найдена - возвращаем null
-    return false;
-}
-
-
 }
