@@ -7,14 +7,34 @@ class ErrorLogger {
     private $maxLines;
 
     public function __construct($logFile = 'error_log.txt', $maxLines = 1000) {
+        // Добавляем расширение, если его нет
+        if (pathinfo($logFile, PATHINFO_EXTENSION) === '') {
+            $logFile .= '.log';
+        }
+        
         $this->logDir = dirname($logFile);
         try {
-            if (!is_dir($this->logDir) && !mkdir($this->logDir, 0755, true)) {
-                throw new \RuntimeException("Failed to create log directory: {$this->logDir}");
+            if (!is_dir($this->logDir)) {
+                if (!mkdir($this->logDir, 0775, true)) {
+                    throw new \RuntimeException("Failed to create log directory: {$this->logDir}");
+                }
             }
             
             $this->logFile = $logFile;
             $this->maxLines = $maxLines;
+            
+            // Создаем файл, если не существует
+            if (!file_exists($this->logFile)) {
+                if (!touch($this->logFile)) {
+                    throw new \RuntimeException("Failed to create log file: {$this->logFile}");
+                }
+                chmod($this->logFile, 0664);
+            }
+            
+            // Проверяем права на запись
+            if (!is_writable($this->logFile)) {
+                throw new \RuntimeException("Log file is not writable: {$this->logFile}");
+            }
             
             set_error_handler([$this, 'handleError'], E_ALL);
             set_exception_handler([$this, 'handleException']);
@@ -48,15 +68,10 @@ class ErrorLogger {
         }
     }
 
-
     private function log($message) {
         try {
-            if ($this->exceedsMaxLines()) {
+            if ($this->exceedsMaxLines() || $this->exceedsMaxSize()) {
                 $this->rotateLog();
-            }
-            
-            if (!is_writable($this->logDir)) {
-                throw new \RuntimeException("Log directory is not writable: {$this->logDir}");
             }
             
             $result = file_put_contents(
@@ -69,6 +84,7 @@ class ErrorLogger {
                 throw new \RuntimeException("Failed to write to log file");
             }
         } catch (\Throwable $e) {
+            // Fallback для ошибок логгера
             error_log("Logger error: " . $e->getMessage());
         }
     }
@@ -87,17 +103,23 @@ class ErrorLogger {
         return $lineCount >= $this->maxLines;
     }
 
-   private function exceedsMaxSize() {
-       return filesize($this->logFile) > 5 * 1024 * 1024; // 5 MB
-   }
+    private function exceedsMaxSize() {
+        if (!file_exists($this->logFile)) return false;
+        return filesize($this->logFile) > 5 * 1024 * 1024; // 5 MB
+    }
     
-   private function rotateLog() {
-       $newFile = $this->logFile . '.' . date('Ymd_His');
-       rename($this->logFile, $newFile);
-       if (extension_loaded('zlib')) {
-           file_put_contents("{$newFile}.gz", gzencode(file_get_contents($newFile)));
-           unlink($newFile);
-       }
-   }
-
+    private function rotateLog() {
+        $newFile = $this->logFile . '.' . date('Ymd_His');
+        if (rename($this->logFile, $newFile)) {
+            // Создаем новый файл лога
+            touch($this->logFile);
+            chmod($this->logFile, 0664);
+            
+            if (extension_loaded('zlib')) {
+                $compressed = $newFile . '.gz';
+                file_put_contents($compressed, gzencode(file_get_contents($newFile)));
+                unlink($newFile);
+            }
+        }
+    }
 }
