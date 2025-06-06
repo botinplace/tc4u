@@ -18,6 +18,26 @@ class Request
     }
 */
 
+    public static function post(
+    string $key, 
+    mixed $default = null, 
+    int $filter = FILTER_DEFAULT, 
+    array|int $options = []
+): mixed {
+    if (!isset($_POST[$key])) return $default;
+
+    $value = $_POST[$key];
+    $options = is_int($options) ? ['flags' => $options] : $options; // Исправление для int
+    
+    if (is_array($value)) {
+        $options['flags'] ??= 0;
+        $options['flags'] |= FILTER_REQUIRE_ARRAY;
+    }
+
+    return filter_var($value, $filter, $options) ?? $default;
+}
+
+/*
 public static function post(
     string $key, 
     mixed $default = null, 
@@ -49,7 +69,7 @@ public static function post(
 
     return $result ?? $default;
 }
-
+*/
     
     // Получение всех данных с фильтрацией
     public static function getAll(int $filter = FILTER_DEFAULT, array|int|null $options = null): array
