@@ -113,6 +113,27 @@ class Session {
 
     // Уничтожение сессии с очисткой куки
     public static function destroy(): void {
+        // Гарантируем старт сессии
+        self::ensureStarted();
+    
+        self::clear();
+        
+        $params = session_get_cookie_params();
+        setcookie(
+            session_name(),
+            '',
+            time() - 42000,
+            $params['path'],
+            $params['domain'],
+            $params['secure'],
+            $params['httponly']
+        );
+        
+        session_destroy();
+        self::$isStarted = false;
+    }
+    
+    /*public static function destroy(): void {
         if (!self::$isStarted) {
             return;
         }
@@ -132,7 +153,7 @@ class Session {
         
         session_destroy();
         self::$isStarted = false;
-    }
+    }*/
 
     // Flash-сообщения (одноразовые данные)
     public static function flash(string $key, $value): void {
