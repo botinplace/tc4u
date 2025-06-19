@@ -1,24 +1,25 @@
 <?php
 namespace Core;
 
-use PDO;
+use Core\Database\DatabaseInterface;
+use RuntimeException;
 
 class Migration
 {
-    private $db;
+    private DatabaseInterface $db;
 
-    public function __construct(PDO $db)
+    public function __construct(DatabaseInterface $db)
     {
         $this->db = $db;
     }
 
-    public function migrate($filePath)
+    public function migrate(string $filePath): void
     {
         if (!file_exists($filePath)) {
-            throw new \Exception("Migration file not found: $filePath");
+            throw new RuntimeException("Migration file not found: $filePath");
         }
 
         $sql = file_get_contents($filePath);
-        $this->db->set($sql);
+        $this->db->execute($sql);
     }
 }
