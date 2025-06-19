@@ -20,7 +20,7 @@ class MigrationManager extends Model
             migration VARCHAR(255) NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )";
-        $this->db->exec($sql);
+        $this->db->execute($sql);
     }
 
     public function run()
