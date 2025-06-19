@@ -1,15 +1,15 @@
 <?php
 namespace Core;
 
-use PDO;
+use Core\Model;
+//use PDO;
 
-class MigrationManager
+class MigrationManager extends Model
 {
     private $db;
 
-    public function __construct(PDO $db)
+    public function __construct()
     {
-        $this->db = $db;
         $this->createMigrationTable();
     }
 
