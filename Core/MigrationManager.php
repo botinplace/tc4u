@@ -74,6 +74,6 @@ class MigrationManager extends Model
     private function getMigrations(): array
     {
         $sql = "SELECT migration FROM migrations";
-        return $this->db->fetchColumn($sql);
+        return $this->db->selectColumn($sql);
     }
 }
