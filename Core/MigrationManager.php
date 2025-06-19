@@ -1,6 +1,7 @@
 <?php
 namespace Core;
 
+use Core\Model;
 use RuntimeException;
 
 class MigrationManager extends Model
