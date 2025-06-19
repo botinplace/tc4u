@@ -1,70 +1,78 @@
 <?php
 namespace Core;
 
-use Core\Model;
-//use PDO;
+use RuntimeException;
 
 class MigrationManager extends Model
 {
-    //private $db;
+    private string $migrationsPath;
 
-    public function __construct()
+    public function __construct(string $migrationsPath, ?string $connectionName = null)
     {
+        // Вызываем родительский конструктор для подключения к БД
+        parent::__construct($connectionName);
+        
+        if (!$this->isDbConnected()) {
+            throw new RuntimeException('Database connection failed');
+        }
+
+        $this->migrationsPath = rtrim($migrationsPath, '/');
         $this->createMigrationTable();
     }
 
-    private function createMigrationTable()
+    private function createMigrationTable(): void
     {
         $sql = "CREATE TABLE IF NOT EXISTS migrations (
             id SERIAL PRIMARY KEY,
-            migration VARCHAR(255) NOT NULL,
+            migration VARCHAR(255) NOT NULL UNIQUE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )";
         $this->db->execute($sql);
     }
 
-    public function run()
+    public function run(): void
     {
-        // Получаем все файлы миграций
-        $migrationFiles = glob('migrations/*.sql');
+        try {
+            // Создаем папку для миграций если её нет
+            if (!is_dir($this->migrationsPath)) {
+                mkdir($this->migrationsPath, 0755, true);
+            }
 
-        // Получаем уже выполненные миграции
-        $appliedMigrations = $this->getMigrations();
+            $migrationFiles = glob($this->migrationsPath . '/*.sql');
+            $appliedMigrations = $this->getMigrations();
+            
+            $newMigrations = array_diff(
+                array_map('basename', $migrationFiles),
+                $appliedMigrations
+            );
 
-        // Фильтруем только новые миграции
-        $newMigrations = array_diff(array_map('basename', $migrationFiles), $appliedMigrations);
+            if (empty($newMigrations)) {
+                echo "No new migrations to execute.\n";
+                return;
+            }
 
-        if (!empty($newMigrations)) {
-            $this->migrate(array_map(function($file) {
-                return __DIR__ . '/' . $file;
-            }, $newMigrations));
+            foreach ($newMigrations as $migration) {
+                $filePath = $this->migrationsPath . '/' . $migration;
+                (new Migration($this->db))->migrate($filePath);
+                $this->logMigration($migration);
+                echo "Executed migration: $migration\n";
+            }
 
-            echo "Миграции выполнены успешно!";
-        } else {
-            echo "Нет новых миграций для выполнения.";
+            echo "All migrations executed successfully!\n";
+        } catch (\Throwable $e) {
+            throw new RuntimeException("Migration failed: " . $e->getMessage());
         }
     }
 
-    private function migrate($migrationFiles)
-    {
-        foreach ($migrationFiles as $file) {
-            $migration = new Migration($this->db);
-            $migration->migrate($file);
-            $this->logMigration($file);
-        }
-    }
-
-    private function logMigration($file)
+    private function logMigration(string $migration): void
     {
         $sql = "INSERT INTO migrations (migration) VALUES (:migration)";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute(['migration' => basename($file)]);
+        $this->db->execute($sql, ['migration' => $migration]);
     }
 
-    public function getMigrations()
+    private function getMigrations(): array
     {
         $sql = "SELECT migration FROM migrations";
-        $stmt = $this->db->query($sql);
-        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+        return $this->db->fetchColumn($sql);
     }
 }
