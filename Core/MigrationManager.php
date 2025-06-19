@@ -6,7 +6,7 @@ use Core\Model;
 
 class MigrationManager extends Model
 {
-    private $db;
+    //private $db;
 
     public function __construct()
     {
