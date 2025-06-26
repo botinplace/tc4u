@@ -18,39 +18,24 @@ class Request
     }
 */
 
-public static function post(
+    public static function post(
     string $key, 
     mixed $default = null, 
     int $filter = FILTER_DEFAULT, 
-    array|int|null $options = []
-): mixed 
-{
-    // Проверка существование ключа
-    if (!isset($_POST[$key])) {
-        return $default;
-    }
+    array|int $options = []
+): mixed {
+    if (!isset($_POST[$key])) return $default;
 
     $value = $_POST[$key];
-
-    // Определение типа данных
-    $isArray = is_array($value);
+    $options = is_int($options) ? ['flags' => $options] : $options; // Исправление для int
     
-    // Добавление флага для массивов
-    if ($isArray) {
-        $options['flags'] = $options['flags'] ?? 0 | FILTER_REQUIRE_ARRAY;
+    if (is_array($value) && !isset($options['flags'])) {
+        $options['flags'] = FILTER_REQUIRE_ARRAY;
     }
 
-    // Фильтрация значениея
-    $result = filter_var(
-        $value, 
-        $filter, 
-        $options
-    );
-
-    return $result ?? $default;
+    return filter_var($value, $filter, $options) ?? $default;
 }
 
-    
     // Получение всех данных с фильтрацией
     public static function getAll(int $filter = FILTER_DEFAULT, array|int|null $options = null): array
     {
@@ -61,15 +46,26 @@ public static function post(
 
     public static function postAll(int $filter = FILTER_DEFAULT, array|int|null $options = null): array
     {
-        return filter_input_array(INPUT_POST, [
-            '*' => ['filter' => $filter, 'options' => $options ?? []]
-        ]) ?? [];
+        $result = [];
+        $filterOptions = is_int($options) ? ['flags' => $options] : (array)$options;
+        
+        foreach ($_POST as $key => $value) {
+            if (is_array($value)) {
+                $result[$key] = filter_var_array($value, $filter, $filterOptions);
+            } else {
+                $result[$key] = filter_var($value, $filter, $filterOptions);
+            }
+        }
+        
+        return $result;
     }
 
     // Получение данных из любого источника (GET/POST)
     public static function input(string $key, mixed $default = null, int $filter = FILTER_DEFAULT, array|int|null $options = null): mixed
     {
-        return self::post($key, self::get($key, $default, $filter, $options), $filter, $options);
+        $value = $_POST[$key] ?? $_GET[$key] ?? $default;
+        return filter_var($value, $filter, $options);
+        //return self::post($key, self::get($key, $default, $filter, $options), $filter, $options);
     }
 
     // Улучшенная обработка JSON
@@ -94,6 +90,12 @@ public static function post(
     // Получение файлов с обработкой
     public static function files(?string $key = null): mixed
     {
+        if ($key && isset($_FILES[$key]['error'])) {
+            if ($_FILES[$key]['error'] !== UPLOAD_ERR_OK) {
+                return null; // Или выбросить исключение
+            }
+        }
+        
         if ($key === null) {
             return $_FILES;
         }
@@ -143,7 +145,8 @@ public static function post(
 
     public static function isJson(): bool
     {
-        return strpos(self::header('Content-Type', ''), 'application/json') !== false;
+        //return strpos(self::header('Content-Type', ''), 'application/json') !== false;
+        return str_contains(self::header('Content-Type'), 'application/json');
     }
 
     // Работа с URL
