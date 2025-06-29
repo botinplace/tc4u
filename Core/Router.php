@@ -83,9 +83,9 @@ class Router
                     $routeData["path"],
                     $data["controller"],
                     $data["needauth"] ?? false,
-                    // добавить $data["onlyforguest"] ?? false,
+                    $data["onlyforguest"] ?? false,
                     $key,
-					$data["middlewares"] ?? [],
+                    $data["middlewares"] ?? [],
                 );
                   //$this->routes[$method][$routeData["path"]] = $route;
                  $this->routes[ $singleMethod ][] = $route;
@@ -177,6 +177,13 @@ class Router
             $this->response->redirect( Config::get('app.auth.path') );
         }
 
+	// Если роут только для гостей и пользователь авторизован
+        if ($route->onlyforguest && $this->isUserAuthenticated()) {
+	    error_log("Маршрут доступен только для гостей: " . $route->path);
+            $this->response->redirect( Config::get('app.uri_fixer') );
+        }
+
+		
         [$class, $function] = $this->resolveController($route);
 
         if (!class_exists($class) || !method_exists($class, $function)) {
