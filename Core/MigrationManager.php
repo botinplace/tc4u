@@ -34,7 +34,6 @@ class MigrationManager extends Model
     public function run(): void
     {
         try {
-            // Создаем папку для миграций если её нет
             if (!is_dir($this->migrationsPath)) {
                 mkdir($this->migrationsPath, 0755, true);
             }
@@ -47,21 +46,34 @@ class MigrationManager extends Model
                 $appliedMigrations
             );
 
+            // Сортировка по имени
+            sort($newMigrations);
+
             if (empty($newMigrations)) {
-                echo "No new migrations to execute.\n";
+                echo "No new migrations.\n";
                 return;
             }
 
             foreach ($newMigrations as $migration) {
                 $filePath = $this->migrationsPath . '/' . $migration;
-                (new Migration($this->db))->migrate($filePath);
-                $this->logMigration($migration);
-                echo "Executed migration: $migration\n";
+                
+                try {
+                    $this->db->beginTransaction();
+                    (new Migration($this->db))->migrate($filePath);
+                    $this->logMigration($migration);
+                    $this->db->commit();
+                } catch (\Throwable $e) {
+                    $this->db->rollBack();
+                    throw new RuntimeException("Migration $migration failed: " . $e->getMessage());
+                }
+                
+                echo "Executed: $migration\n";
             }
-
-            echo "All migrations executed successfully!\n";
         } catch (\Throwable $e) {
-            throw new RuntimeException("Migration failed: " . $e->getMessage());
+            //throw new RuntimeException("Migration failed: " . $e->getMessage());
+            // Логирование в файл/Sentry
+            error_log($e->getMessage());
+            throw $e;
         }
     }
 
