@@ -43,9 +43,10 @@ class Controller
 public function render(array $extra_vars = []): void
 {
     try {
-        if (ob_get_level() > 0) {
-            ob_end_clean();
-        }
+        
+        //if (ob_get_level() > 0) {ob_end_clean();}
+        while ( ob_get_level() > 0 ) {ob_end_clean();}
+        
     } catch (\Throwable $e) {
         error_log('Ошибка очистки буфера: ' . $e->getMessage());        
         // throw $e;
