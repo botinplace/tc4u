@@ -2,12 +2,11 @@
 namespace Core;
 
 use Core\Model;
-use Core\Session;
 use Core\Security\Password;
 use Core\Security\Random;
 use Throwable;
 
-abstract class BaseRepository extends Model
+abstract class Repository extends Model
 {
     protected string $returning = 'id';
     protected array $guarded = [];
@@ -70,7 +69,6 @@ abstract class BaseRepository extends Model
 
         } catch (Throwable $e) {
             error_log('Database error: ' . $e->getMessage());
-            Session::flash('error', $options['errorMessage'] ?? 'Ошибка при создании записи');
             return null;
         }
     }
