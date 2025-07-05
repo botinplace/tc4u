@@ -52,8 +52,8 @@ abstract class BaseRepository extends Model
             );
             
             $columns = implode(', ', $allColumns);
-            //$placeholders = implode(', ', $placeholders);
-            $placeholders = implode(', ', array_fill(0, count($filteredData), '?'));
+            $placeholders = implode(', ', $placeholders);
+            //$placeholders = implode(', ', array_fill(0, count($filteredData), '?'));
             $values = array_values($filteredData);
             
             $sql = "INSERT INTO {$this->table} ($columns) VALUES ($placeholders) RETURNING {$this->returning}";
