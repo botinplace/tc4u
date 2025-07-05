@@ -13,10 +13,14 @@ class Migration
         $this->db = $db;
     }
 
-    public function migrate(string $filePath): void
+ public function migrate(string $filePath): void
     {
         if (!file_exists($filePath)) {
-            throw new RuntimeException("Migration file not found: $filePath");
+            throw new RuntimeException("File not found: $filePath");
+        }
+        
+        if (pathinfo($filePath, PATHINFO_EXTENSION) !== 'sql') {
+            throw new RuntimeException("Invalid file type");
         }
 
         $sql = file_get_contents($filePath);
