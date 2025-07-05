@@ -55,10 +55,10 @@ abstract class Repository extends Model
             //$placeholders = implode(', ', array_fill(0, count($filteredData), '?'));
             $values = array_values($filteredData);
             
-            $sql = "INSERT INTO {$this->table} ($columns) VALUES ($placeholders) RETURNING {$this->returning}";
+            $sql = "INSERT INTO {$this->table} ($columns) VALUES ($placeholders)";
             
             // Выполнение запроса
-            $result = $this->db->insertWithReturn($sql, $values);
+            $result = $this->db->insertWithReturn($sql, $values,$this->returning);
             
             // Обработка данных после вставки
             foreach ($options['afterCreate'] ?? [] as $callback) {
