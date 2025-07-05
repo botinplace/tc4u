@@ -25,7 +25,6 @@ class FileCacheDriver implements CacheDriverInterface {
         }
 
         try {
-			error_log($this->cacheFile);
             return require $this->cacheFile;
         } catch (\Throwable $e) {
             error_log("File cache error: " . $e->getMessage());
