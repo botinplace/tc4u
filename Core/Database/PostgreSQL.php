@@ -118,6 +118,14 @@ class PostgreSQL implements DatabaseInterface
     private function quoteIdentifier(string $field): string {
         return '"' . str_replace('"', '""', $field) . '"';
     }
+
+    private function quoteIdentifierList(string $fields): string
+    {
+        return implode(', ', array_map(
+            fn($field) => $this->quoteIdentifier(trim($field)),
+            explode(',', $fields)
+        ));
+    }
     
     public function execute(string $query, array $params = []): ?\PDOStatement 
     {
@@ -196,6 +204,7 @@ class PostgreSQL implements DatabaseInterface
         return $this->dbh->lastInsertId();
     }
 
+    /*
     public function insertWithReturn(string $query, array $params = [], string $returnColumn = 'id'): ?array 
     {
         if (!preg_match('/RETURNING/i', $query)) {
@@ -203,6 +212,20 @@ class PostgreSQL implements DatabaseInterface
         }
         $result = $this->execute($query, $params);
         return $result ? $result->fetchAll(PDO::FETCH_COLUMN) : null;
+    }
+    */
+    
+    public function insertWithReturn(string $query, array $params = [], string $returning = 'id'): ?array 
+    {
+        // Поддержка возврата нескольких полей
+        $returning = str_replace('"', '', $returning); // Безопасное экранирование
+        
+        if (!preg_match('/RETURNING/i', $query)) {
+            $query .= " RETURNING " . $this->quoteIdentifierList($returning);
+        }
+        
+        $result = $this->execute($query, $params);
+        return $result ? $result->fetch(PDO::FETCH_ASSOC) : null;
     }
 
     public function update(string $query, array $params = []): ?int 
