@@ -9,24 +9,23 @@ class FormTokenManager {
     private $maxTokens = 20;
 
     public function __construct() {
-        if (!Session:has($this->sessionKey) ) {
-            Session::set($this->sessionKey , [] );
+        if (!Session::has($this->sessionKey)) {
+            Session::set($this->sessionKey, []);
         }
     }
 
-    /**
-     * Генерирует новый токен для формы
-     */
     public function generateToken(): array {
         $this->cleanupExpiredTokens();
         
         $formId = bin2hex(random_bytes(16));
         $token = bin2hex(random_bytes(32));
         
-        Session::set( $this->sessionKey.'.'.$formId , [
+        $tokens = Session::get($this->sessionKey, []);
+        $tokens[$formId] = [
             'token' => $token,
             'created_at' => time()
-        ]);
+        ];
+        Session::set($this->sessionKey, $tokens);
         
         $this->enforceMaxTokens();
         
@@ -36,50 +35,50 @@ class FormTokenManager {
         ];
     }
 
-    /**
-     * Валидирует переданный токен
-     */
     public function validateToken(string $formId, string $token): bool {
-        if (!Session::has( $this->sessionKey.'.'.$formId)  {
+        $tokens = Session::get($this->sessionKey, []);
+        
+        if (!isset($tokens[$formId])) {
             return false;
         }
 
-        $stored = Session::get( $this->sessionKey.'.'.$formId);
-        Session::remove( $this->sessionKey.'.'.$formId );
+        $stored = $tokens[$formId];
+        unset($tokens[$formId]);
+        Session::set($this->sessionKey, $tokens);
 
-        return hash_equals($stored['token'], $token);
+        return hash_equals($stored['token'], $token) && 
+               (time() - $stored['created_at'] <= $this->tokenLifetime);
     }
 
-    /**
-     * Очищает просроченные токены
-     */
     private function cleanupExpiredTokens(): void {
-        foreach (Session::get($this->sessionKey) as $formId => $data) {
-            if (time() - $data['created_at'] > $this->tokenLifetime) {
-                Session::remove( $this->sessionKey.'.'.$formId);
+        $tokens = Session::get($this->sessionKey, []);
+        $now = time();
+        
+        foreach ($tokens as $formId => $data) {
+            if ($now - $data['created_at'] > $this->tokenLifetime) {
+                unset($tokens[$formId]);
             }
         }
+        
+        Session::set($this->sessionKey, $tokens);
     }
 
-    /**
-     * Ограничивает максимальное количество токенов
-     */
     private function enforceMaxTokens(): void {
-        while (count(Session::get($this->sessionKey) ) > $this->maxTokens) {
-            array_shift( Session::get($this->sessionKey) );
+        $tokens = Session::get($this->sessionKey, []);
+        
+        if (count($tokens) > $this->maxTokens) {
+            $tokens = array_slice($tokens, -$this->maxTokens, null, true);
+            Session::set($this->sessionKey, $tokens);
         }
     }
 
-    /**
-     * Получает HTML-поля для вставки в форму
-     */
     public function getFormFields(): string {
         $tokenData = $this->generateToken();
         return sprintf(
             '<input type="hidden" name="form_id" value="%s">
              <input type="hidden" name="token" value="%s">',
-            htmlspecialchars($tokenData['form_id']),
-            htmlspecialchars($tokenData['token'])
+            htmlspecialchars($tokenData['form_id'], ENT_QUOTES),
+            htmlspecialchars($tokenData['token'], ENT_QUOTES)
         );
     }
 }
