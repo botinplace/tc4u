@@ -9,6 +9,8 @@ use Throwable;
 
 abstract class BaseRepository extends Model
 {
+    protected string $returning = 'id';
+    protected array $guarded = [];
     protected function createRecord(array $data, array $options = []): ?array
     {
         try {
@@ -50,7 +52,8 @@ abstract class BaseRepository extends Model
             );
             
             $columns = implode(', ', $allColumns);
-            $placeholders = implode(', ', $placeholders);
+            //$placeholders = implode(', ', $placeholders);
+            $placeholders = implode(', ', array_fill(0, count($filteredData), '?'));
             $values = array_values($filteredData);
             
             $sql = "INSERT INTO {$this->table} ($columns) VALUES ($placeholders) RETURNING {$this->returning}";
@@ -92,7 +95,10 @@ abstract class BaseRepository extends Model
             if (!$this->isDbConnected()) {
                 return null;
             }
-            return $this->db->selectRow("SELECT * FROM {$this->table} WHERE $field = ? LIMIT 1", [$value]);
+            if (!in_array($field, $this->fillable)) {
+                throw new \InvalidArgumentException("Invalid field name: $field");
+            }
+            return $this->db->selectRow("SELECT * FROM {$this->table} WHERE `$field` = ? LIMIT 1", [$value]);
         } catch (Throwable $e) {
             error_log('Database error: ' . $e->getMessage());
             return null;
