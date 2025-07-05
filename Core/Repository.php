@@ -96,7 +96,7 @@ abstract class Repository extends Model
             if (!in_array($field, $this->fillable)) {
                 throw new \InvalidArgumentException("Invalid field name: $field");
             }
-            return $this->db->selectRow("SELECT * FROM {$this->table} WHERE `$field` = ? LIMIT 1", [$value]);
+            return $this->db->selectRow("SELECT * FROM {$this->table} WHERE $field = ? LIMIT 1", [$value]);
         } catch (Throwable $e) {
             error_log('Database error: ' . $e->getMessage());
             return null;
