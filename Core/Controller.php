@@ -133,7 +133,7 @@ public function render(array $extra_vars = []): void
     {
         $newheader = base64_encode($this->pagedata["pagetitle"] ?? "");
         $content = $this->templateEngine->render($this->content);
-        
+
         $hiddenInputs = '<input type="hidden" id="NewTitleTextByOnlyMain" value="' 
             . htmlspecialchars($this->pagedata["pagetitle"] ?? "", ENT_QUOTES) . '" />';
         
@@ -199,7 +199,22 @@ public function render(array $extra_vars = []): void
 
     private function loadContent(string $contentFile): string
     {
-        $filePath = APP . "Content/" . ucfirst($contentFile) . "Content.html";
+        //$filePath = APP . "Content/" . ucfirst($contentFile) . "Content.html";
+        // Нормализация пути
+        $path = trim($contentFile, '/');
+        $path = str_replace(['..', "\0"], '', $path); // Блокировка path traversal
+        
+        // Разделение пути на директории и файл
+        $parts = explode('/', $path);
+        $filename = array_pop($parts);
+        
+        // Формирование корректного пути
+        $dirPath = !empty($parts) 
+            ? implode('/', $parts) . '/' 
+            : '';
+        
+        $filePath = APP . "Content/{$dirPath}{$filename}Content.html";
+        
         return file_exists($filePath) ? file_get_contents($filePath) : "";
     }
 
