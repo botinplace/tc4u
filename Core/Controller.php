@@ -161,7 +161,7 @@ public function render(array $extra_vars = []): void
         }
     }
 
-    private function isUserAuthenticated(): bool
+    protected function isUserAuthenticated(): bool
     {
         return Session::get('user') !== null;
     }
