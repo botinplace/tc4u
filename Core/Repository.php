@@ -340,7 +340,7 @@ abstract class Repository extends Model
     
     protected function loadRelations(array $record): array
     {
-        if (empty($record) return $record;
+        if (empty($record)) return $record;
         
         foreach ($this->relations as $relation => $config) {
             if (is_string($config)) {
