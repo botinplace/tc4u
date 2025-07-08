@@ -311,7 +311,7 @@ abstract class Repository extends Model
             
             // Получение общего количества
             $countSql = "SELECT COUNT(*) FROM {$this->quoteIdentifier($this->table)} $where";
-            $total = (int)($this->db->selectValue($countSql, $params) ?? 0;
+            $total = (int)($this->db->selectValue($countSql, $params)) ?? 0;
             
             return [
                 'items' => $items ?? [],
