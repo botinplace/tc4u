@@ -54,7 +54,7 @@ abstract class Repository extends Model
         
         error_log($message);
         
-        if ($this->db && $this->db->inTransaction()) {
+        if ($this->db && $this->db->dbh->inTransaction()) {
             try {
                 $this->db->rollBack();
             } catch (\Throwable $rollbackEx) {
@@ -156,7 +156,7 @@ abstract class Repository extends Model
                 'callback' => $callbackResult
             ];
         } catch (\Throwable $e) {
-            if ($this->db->inTransaction()) {
+            if ($this->db->dbh->inTransaction()) {
                 $this->db->rollBack();
             }
             $this->handleException($e, 'createWithTransaction');
