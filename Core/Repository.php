@@ -54,13 +54,13 @@ abstract class Repository extends Model
         
         error_log($message);
         
-        if ($this->db && $this->db->dbh->inTransaction()) {
+        
             try {
-                $this->db->rollBack();
+                $this->db->close();
             } catch (\Throwable $rollbackEx) {
                 error_log("Rollback failed: " . $rollbackEx->getMessage());
             }
-        }
+        
     }
     
     protected function createRecord(array $data, array $options = []): ?array
