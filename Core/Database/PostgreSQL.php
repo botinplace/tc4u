@@ -115,7 +115,7 @@ class PostgreSQL implements DatabaseInterface
         }
     }
 
-    private function quoteIdentifier(string $field): string {
+    public function quoteIdentifier(string $field): string {
         return '"' . str_replace('"', '""', $field) . '"';
     }
 
