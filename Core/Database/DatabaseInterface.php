@@ -7,6 +7,8 @@ use PDOStatement;
 interface DatabaseInterface {
     // Singleton pattern methods
     public static function getInstance(array $config): static;
+
+    public function quoteIdentifier(string $identifier): string;
     
     // Connection management
     public function close(): void;
