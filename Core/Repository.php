@@ -32,7 +32,7 @@ abstract class Repository extends Model
         }
     }
     
-    protected function quoteIdentifier(string $identifier): string
+    public function quoteIdentifier(string $identifier): string
     {
         if ($this->db && method_exists($this->db, 'quoteIdentifier')) {
             return $this->db->quoteIdentifier($identifier);
