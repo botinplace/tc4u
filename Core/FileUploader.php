@@ -1,5 +1,5 @@
 <?php
-namespace Core\Storage;
+namespace Core;
 
 use Exception;
 use RuntimeException;
