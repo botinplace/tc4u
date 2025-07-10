@@ -14,8 +14,8 @@ class FileUploader
 
     public function __construct(string $baseUploadPath = null)
     {
-        //$this->baseUploadPath = $baseUploadPath ?? $_SERVER['DOCUMENT_ROOT'] . '/uploads/';
-        $this->baseUploadPath = $baseUploadPath ?? ROOT . '/uploads/';
+        $this->baseUploadPath = $baseUploadPath ?? $_SERVER['DOCUMENT_ROOT'] . '/uploads/';
+        //$this->baseUploadPath = $baseUploadPath ?? PUBLIC_DIR . '/uploads/';
     }
 
     public function setAllowedExtensions(array $extensions): self
