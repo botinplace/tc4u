@@ -3,8 +3,8 @@ namespace Core\Database;
 
 use Core\Config\Config;
 use Core\Database\DatabaseInterface;
-use PDO;
-use PDOException;
+use \PDO;
+use \PDOException;
 
 class PostgreSQL implements DatabaseInterface 
 {
