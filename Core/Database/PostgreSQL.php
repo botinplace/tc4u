@@ -51,7 +51,7 @@ class PostgreSQL implements DatabaseInterface
                 ]
             );
             $this->isConnected = true;
-            error_log("PostgreSQL connection established: {$this->connectionName}");
+            //error_log("PostgreSQL connection established: {$this->connectionName}");
         } catch (PDOException $e) {
             $this->isConnected = false;
             error_log("PostgreSQL connection FAILED [{$this->connectionName}]: " . $e->getMessage());
