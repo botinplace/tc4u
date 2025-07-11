@@ -12,7 +12,7 @@ class FileUploader
     protected string $baseUploadPath;
     protected string $publicBaseUrl = '/uploads/';
 
-    public function __construct(string $baseUploadPath = null)
+    public function __construct(?string $baseUploadPath = null)
     {
         $this->baseUploadPath = $baseUploadPath ?? $_SERVER['DOCUMENT_ROOT'] . '/uploads/';
         //$this->baseUploadPath = $baseUploadPath ?? PUBLIC_DIR . '/uploads/';
@@ -42,7 +42,7 @@ class FileUploader
         return $this;
     }
 
-    public function upload(array $file, string $directory, string $customFilename = null): array
+    public function upload(array $file, string $directory, ?string $customFilename = null): array
     {
         $this->validateUpload($file);
 
