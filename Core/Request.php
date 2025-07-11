@@ -5,49 +5,40 @@ class Request
 {
     private static ?array $parsedBody = null;
 
-    // Получение данных с фильтрацией
-    public static function get(string $key, mixed $default = null, int $filter = FILTER_DEFAULT, array|int|null $options = null): mixed
+    public static function get(string $key, mixed $default = null, int $filter = FILTER_DEFAULT, array|int $options = 0): mixed
     {
-        return filter_input(INPUT_GET, $key, $filter, $options ?? 0) ?? $default;
+        return filter_input(INPUT_GET, $key, $filter, $options) ?? $default;
     }
-
-    /*
-    public static function post(string $key, mixed $default = null, int $filter = FILTER_DEFAULT, array|int|null $options = null): mixed
-    {
-        return filter_input(INPUT_POST, $key, $filter, $options ?? 0) ?? $default;
-    }
-*/
 
     public static function post(
-    string $key, 
-    mixed $default = null, 
-    int $filter = FILTER_DEFAULT, 
-    array|int $options = []
-): mixed {
-    if (!isset($_POST[$key])) return $default;
+        string $key, 
+        mixed $default = null, 
+        int $filter = FILTER_DEFAULT, 
+        array|int $options = []
+    ): mixed {
+        if (!isset($_POST[$key])) return $default;
 
-    $value = $_POST[$key];
-    $options = is_int($options) ? ['flags' => $options] : $options; // Исправление для int
-    
-    if (is_array($value) && !isset($options['flags'])) {
-        $options['flags'] = FILTER_REQUIRE_ARRAY;
+        $value = $_POST[$key];
+        $options = is_int($options) ? ['flags' => $options] : $options;
+        
+        if (is_array($value) && !isset($options['flags'])) {
+            $options['flags'] = FILTER_REQUIRE_ARRAY;
+        }
+
+        return filter_var($value, $filter, $options) ?? $default;
     }
 
-    return filter_var($value, $filter, $options) ?? $default;
-}
-
-    // Получение всех данных с фильтрацией
-    public static function getAll(int $filter = FILTER_DEFAULT, array|int|null $options = null): array
+    public static function getAll(int $filter = FILTER_DEFAULT, array|int $options = []): array
     {
         return filter_input_array(INPUT_GET, [
-            '*' => ['filter' => $filter, 'options' => $options ?? []]
+            '*' => ['filter' => $filter, 'options' => $options]
         ]) ?? [];
     }
 
-    public static function postAll(int $filter = FILTER_DEFAULT, array|int|null $options = null): array
+    public static function postAll(int $filter = FILTER_DEFAULT, array|int $options = []): array
     {
         $result = [];
-        $filterOptions = is_int($options) ? ['flags' => $options] : (array)$options;
+        $filterOptions = is_int($options) ? ['flags' => $options] : $options;
         
         foreach ($_POST as $key => $value) {
             if (is_array($value)) {
@@ -60,12 +51,10 @@ class Request
         return $result;
     }
 
-    // Получение данных из любого источника (GET/POST)
-    public static function input(string $key, mixed $default = null, int $filter = FILTER_DEFAULT, array|int|null $options = null): mixed
+    public static function input(string $key, mixed $default = null, int $filter = FILTER_DEFAULT, array|int $options = []): mixed
     {
         $value = $_POST[$key] ?? $_GET[$key] ?? $default;
         return filter_var($value, $filter, $options);
-        //return self::post($key, self::get($key, $default, $filter, $options), $filter, $options);
     }
 
     // Улучшенная обработка JSON
