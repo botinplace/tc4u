@@ -60,7 +60,7 @@ abstract class Repository extends Model
             } catch (\Throwable $rollbackEx) {
                 error_log("Rollback failed: " . $rollbackEx->getMessage());
             }
-        
+        throw new RuntimeException("Database operation failed", 0, $e);
     }
     
     protected function createRecord(array $data, array $options = []): ?array
