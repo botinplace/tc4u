@@ -25,7 +25,7 @@ abstract class Repository extends Model
         }
     }
     
-    protected function checkDbConnection(): void
+    public function checkDbConnection(): void
     {
         if (!$this->isDbConnected()) {
             throw new RuntimeException('Database connection unavailable');
