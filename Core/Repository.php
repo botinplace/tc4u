@@ -307,7 +307,7 @@ abstract class Repository extends Model
             $params[] = $perPage;
             $params[] = $offset;
             
-            $items = $this->db->select($sql, $params);
+            $items = $this->db->selectAll($sql, $params);
             
             // Получение общего количества
             $countSql = "SELECT COUNT(*) FROM {$this->quoteIdentifier($this->table)} $where";
