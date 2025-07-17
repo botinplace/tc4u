@@ -1,6 +1,8 @@
 <?php
 namespace Core;
 
+use Core\Config\Config;
+
 class Session {
     private static bool $isStarted = false;
 
@@ -9,21 +11,19 @@ class Session {
         if (self::$isStarted) {
             return;
         }
-
+         // Получаем настройки из конфига
+        $config = Config::get('session.options', []);
+        
+        // Устанавливаем значения по умолчанию
         $defaultOptions = [
-            'name' => 'secure_sid',
-            'cookie_lifetime' => 86400, // 1 день
-            //'cookie_path' => '/',
-            //'cookie_domain' => $_SERVER['HTTP_HOST'] ?? '',
-            'cookie_secure' => isset($_SERVER['HTTPS']),
-            'cookie_httponly' => true,
-            'cookie_samesite' => 'Strict',
-            'use_strict_mode' => true,
-            'use_only_cookies' => 1,
-            'cache_limiter' => 'nocache'
-            //Устаревшие параметры (с 8.1 ):
-            //'sid_length' => 128,
-            //'sid_bits_per_character' => 6
+            'name' => $config['name'] ?? 'secure_sid',
+            'cookie_lifetime' => $config['cookie_lifetime'] ?? 86400,
+            'cookie_secure' => $config['cookie_secure'] ?? isset($_SERVER['HTTPS']),
+            'cookie_httponly' => $config['cookie_httponly'] ?? true,
+            'cookie_samesite' => $config['cookie_samesite'] ?? 'Lax',
+            'use_strict_mode' => $config['use_strict_mode'] ?? true,
+            'use_only_cookies' => $config['use_only_cookies'] ?? 1,
+            'cache_limiter' => $config['cache_limiter'] ?? 'nocache'
         ];
 
         session_start(array_merge($defaultOptions, $options));
