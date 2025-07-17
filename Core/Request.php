@@ -51,6 +51,22 @@ class Request
         return $result;
     }
 
+    public static function currentUri(): string
+    {
+        return parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+    }
+    
+    public static function isCurrentUri(string $uri): bool
+    {
+        return self::currentUri() === $uri;
+    }
+    /*
+    public static function isParentUri(string $uri): bool
+    {
+        $current = self::currentUri();
+        return strpos($current, $uri) === 0 && $uri !== '/';
+    }
+    */
     public static function input(string $key, mixed $default = null, int $filter = FILTER_DEFAULT, array|int $options = []): mixed
     {
         $value = $_POST[$key] ?? $_GET[$key] ?? $default;
