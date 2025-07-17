@@ -70,7 +70,15 @@ public function render(array $extra_vars = []): void
     $extra_vars["isUserAuthenticated"] = $this->isUserAuthenticated();
     $extra_vars["user"] = isset($extra_vars['auth']['user']) ? $extra_vars['auth']['user'] : (isset( $this->pagedata['auth']['user'] ) ? $this->pagedata['auth']['user'] : [] );
     $extra_vars['pagetitle'] = isset($extra_vars['pagetitle']) ? $extra_vars['pagetitle'] : (isset($this->pagedata['pagetitle']) ? $this->pagedata['pagetitle'] : '' );
-    
+    $extra_vars["current_uri"] = Request::currentUri();
+    $extra_vars["is_current_uri"] = function($uri) {
+        return Request::isCurrentUri($uri);
+    };
+    /*
+    $extra_vars["is_parent_uri"] = function($uri) {
+        return Request::isParentUri($uri);
+    };
+    */
 
     // Объединяем pagedata и extra_vars в один массив для шаблона
     $templateData = array_merge($this->pagedata, $extra_vars);
