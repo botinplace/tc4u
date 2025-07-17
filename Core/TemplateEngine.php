@@ -234,8 +234,46 @@ PHP;
         );
     }
 
+
+    private function compileVariableAccess(string $var): string
+{
+    $var = trim($var);
+    
+    // Обработка констант
+    if (is_numeric($var)) {
+        return $var;
+    }
+    
+    // Обработка строковых литералов
+    if (preg_match('/^([\'"])(.*)\1$/', $var, $matches)) {
+        return var_export($matches[2], true);
+    }
+    
+    // Обработка переменных цикла
+    if (!empty($this->loopStack)) {
+        if ($var === 'key') {
+            return "\$this->getCurrentLoopContext('key')";
+        }
+        
+        if ($var === 'value') {
+            return "\$this->getCurrentLoopContext('value')";
+        }
+        
+        // Обработка value.property
+        if (strpos($var, 'value.') === 0) {
+            $property = substr($var, 6);
+            return "\$this->getNestedValue(\$this->getCurrentLoopContext('value'), '$property')";
+        }
+    }
+    
+    // Обработка глобальных переменных
+    return "\$this->getValue('$var')";
+}
+    /*
     private function compileVariableAccess(string $var): string
     {
+        $var = trim($var);
+        
         // Обработка констант
         if (is_numeric($var)) {
             return $var;
@@ -271,11 +309,16 @@ PHP;
         }
         
         return "\$this->getValue('$var')";
-    }
+    }*/
     
     
     public function getValue(string $key)
     {
+        // Специальная обработка для current_uri
+        if ($key === 'current_uri') {
+            return parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+        }
+        
         // Приоритет: переменные цикла
         if (!empty($this->loopStack)) {
             if ($key === 'key') {
@@ -475,6 +518,8 @@ PHP;
 
     private function parseCondition(string $condition): string
 {
+    $condition = trim($condition);
+    
     $condition = preg_replace('/\bnot\s+/', '!', $condition);
     
     // Обработка числовых литералов
@@ -485,6 +530,13 @@ PHP;
     // Обработка строковых литералов
     if (preg_match('/^([\'"])(.*)\1$/', $condition, $matches)) {
         return var_export($matches[2], true);
+    }
+
+     // Специальная обработка для сравнения URI
+    if (preg_match('/^([a-zA-Z0-9-_\.]+)\s*==\s*([\'"])(\/[^\'"]*)\2$/', $condition, $uriMatches)) {
+        $var = $this->compileVariableAccess($uriMatches[1]);
+        $path = var_export($uriMatches[3], true);
+        return "({$var} === {$path})";
     }
     
     // Булевые значения
