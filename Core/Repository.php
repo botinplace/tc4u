@@ -266,6 +266,7 @@ abstract class Repository extends Model
         }
     }
 
+    /*
     public function paginate(
         int $page = 1, 
         int $perPage = 15, 
@@ -331,7 +332,74 @@ abstract class Repository extends Model
             ];
         }
     }
-    
+    */
+    public function paginate(
+    int $page = 1, 
+    int $perPage = 15, 
+    array $conditions = [],
+    string $orderBy = 'id DESC'
+): array
+{
+    try {
+        $this->checkDbConnection();
+        $this->checkTable();
+        
+        $where = '';
+        $params = [];
+        
+        if (!empty($conditions)) {
+            $clauses = [];
+            foreach ($conditions as $field => $value) {
+                if (!in_array($field, $this->fillable)) {
+                    throw new \InvalidArgumentException("Invalid field name: $field");
+                }
+                
+                $clauses[] = "{$this->quoteIdentifier($field)} = ?";
+                $params[] = $value;
+            }
+            $where = 'WHERE ' . implode(' AND ', $clauses);
+        }
+        
+        if (!preg_match('/^[a-z_]+(\s+(ASC|DESC))?$/i', $orderBy)) {
+            throw new \InvalidArgumentException("Invalid order by clause: $orderBy");
+        }
+        
+        $offset = max(0, ($page - 1) * $perPage);
+        
+        // Data query with LIMIT and OFFSET
+        $sql = "SELECT * FROM {$this->quoteIdentifier($this->table)} 
+                $where 
+                ORDER BY $orderBy
+                LIMIT ? OFFSET ?";
+        
+        $dataParams = $params;
+        $dataParams[] = $perPage;
+        $dataParams[] = $offset;
+        
+        $items = $this->db->selectAll($sql, $dataParams);
+        
+        // Count query without LIMIT/OFFSET parameters
+        $countSql = "SELECT COUNT(*) FROM {$this->quoteIdentifier($this->table)} $where";
+        $total = (int)($this->db->selectValue($countSql, $params)) ?? 0;
+        
+        return [
+            'items' => $items ?? [],
+            'total' => $total,
+            'current_page' => $page,
+            'per_page' => $perPage,
+            'last_page' => $perPage > 0 ? (int)ceil($total / $perPage) : 1
+        ];
+    } catch (Throwable $e) {
+        $this->handleException($e, 'paginate');
+        return [
+            'items' => [],
+            'total' => 0,
+            'current_page' => $page,
+            'per_page' => $perPage,
+            'last_page' => 1
+        ];
+    }
+}
     public function with(array $relations): self
     {
         $this->relations = $relations;
