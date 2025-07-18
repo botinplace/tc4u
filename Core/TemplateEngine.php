@@ -47,7 +47,7 @@ class TemplateEngine
                 if ($this->debugMode) {
                     $fast_array["{{" . $key . "}}"] = $value;
                 } else {
-                    trigger_error("Objects not allowed in production", E_USER_WARNING);
+                    //trigger_error("Objects not allowed in production", E_USER_WARNING);
                     $fast_array["{{" . $key . "}}"] = "Object";
                 }
             } else {
@@ -671,7 +671,7 @@ PHP;
         return $current;
     }
  
-    private function getNestedValue($data, $path)
+    private function getNestedValue($data, $path, int $depth = 0)
     {
         if ($depth > $this->maxRecursionDepth) {
             trigger_error("Max recursion depth exceeded", E_USER_WARNING);
