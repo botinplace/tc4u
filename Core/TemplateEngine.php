@@ -63,6 +63,19 @@ class TemplateEngine
     {
         try {
             $this->fast_array = array_merge($this->fast_array, $this->prepareExtraVars($data));
+            // Разрешается только определенные PHP-теги (<?= ? >)
+            $template = preg_replace_callback(
+                '/<\?(?:php)?\s*(.*?)\?>/s',
+                function ($matches) {
+                    //return '&lt;?php ' . htmlspecialchars($matches[1], ENT_QUOTES, 'UTF-8') . '?&gt;';
+                    return '&lt;?php ' . str_replace(
+                        ["\n", "\r", "\t"],
+                        ['&#10;', '&#13;', '&#9;'],
+                        htmlspecialchars($matches[1], ENT_QUOTES, 'UTF-8')
+                    ) . ' ?&gt;';
+                },
+                $template
+            );
             $compiledFile = $this->compileTemplate($template);
             return $this->renderCompiled($compiledFile);
         } catch (\Throwable $e) {
@@ -158,20 +171,6 @@ class TemplateEngine
     {
         $this->loopVarCounter = 0;
 
-        // Разрешается только определенные PHP-теги (<?= ? >)
-        $template = preg_replace_callback(
-            '/<\?(?:php)?\s*(.*?)\?>/s',
-            function ($matches) {
-                //return '&lt;?php ' . htmlspecialchars($matches[1], ENT_QUOTES, 'UTF-8') . '?&gt;';
-                return '&lt;?php ' . str_replace(
-                    ["\n", "\r", "\t"],
-                    ['&#10;', '&#13;', '&#9;'],
-                    htmlspecialchars($matches[1], ENT_QUOTES, 'UTF-8')
-                ) . ' ?&gt;';
-            },
-            $template
-        );
-        
         // Шаг 1: Замена экранированных тегов
         $template = preg_replace_callback(
             '/\\\\(\{\{|\{%|%\\})/',
