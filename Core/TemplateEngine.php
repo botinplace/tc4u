@@ -157,6 +157,15 @@ class TemplateEngine
     private function compile(string $template): string
     {
         $this->loopVarCounter = 0;
+
+        // Разрешается только определенные PHP-теги (<?= ? >)
+        $template = preg_replace_callback(
+            '/<\?(?!php|=)(.*?)\?>/s',
+            function ($matches) {
+                return htmlspecialchars($matches[0], ENT_QUOTES, 'UTF-8');
+            },
+            $template
+        );
         
         // Шаг 1: Замена экранированных тегов
         $template = preg_replace_callback(
