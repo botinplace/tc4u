@@ -521,10 +521,12 @@ PHP;
     $condition = trim($condition);
     
     // *Обработка строковых литералов с кавычками
+    /*
     if (preg_match('/^([\'"])(.*)\1$/', $condition, $matches)) {
         return var_export($matches[2], true);
     }
-
+    */
+    
     // *Специальная обработка для сравнения строковых литералов
     if (preg_match('/^([\'"])(.*)\1\s*(===|!==|==|!=|>=|<=|>|<)\s*([\'"])(.*)\4$/', $condition, $matches)) {
         //$left = var_export($matches[2], true);
