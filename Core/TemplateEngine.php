@@ -527,10 +527,13 @@ PHP;
 
     // *Специальная обработка для сравнения строковых литералов
     if (preg_match('/^([\'"])(.*)\1\s*(===|!==|==|!=|>=|<=|>|<)\s*([\'"])(.*)\4$/', $condition, $matches)) {
-        $left = var_export($matches[2], true);
+        //$left = var_export($matches[2], true);
+        $left = $matches[2];
         $operator = $matches[3];
-        $right = var_export($matches[5], true);
-        return "({$left} {$operator} {$right})";
+        $right = $matches[5];
+        //$right = var_export($matches[5], true);
+        //return "({$left} {$operator} {$right})";
+        return "( '$left' {$operator} '$right' )";
     }
     
     $condition = preg_replace('/\bnot\s+/', '!', $condition);
