@@ -160,9 +160,14 @@ class TemplateEngine
 
         // Разрешается только определенные PHP-теги (<?= ? >)
         $template = preg_replace_callback(
-            '/<\?(?!php|=)(.*?)\?>/s',
+            '/<\?(?:php)?\s*(.*?)\?>/s',
             function ($matches) {
-                return htmlspecialchars($matches[0], ENT_QUOTES, 'UTF-8');
+                //return '&lt;?php ' . htmlspecialchars($matches[1], ENT_QUOTES, 'UTF-8') . '?&gt;';
+                return '&lt;?php ' . str_replace(
+                    ["\n", "\r", "\t"],
+                    ['&#10;', '&#13;', '&#9;'],
+                    htmlspecialchars($matches[1], ENT_QUOTES, 'UTF-8')
+                ) . ' ?&gt;';
             },
             $template
         );
