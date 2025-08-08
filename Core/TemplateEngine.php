@@ -526,10 +526,10 @@ PHP;
     }
 
     // *Специальная обработка для сравнения строковых литералов
-    if (preg_match('/^([\'"])(.*)\1\s*(===|!==|==|!=|>=|<=|>|<)\s*([\'"])(.*)\3$/', $condition, $matches)) {
+    if (preg_match('/^([\'"])(.*)\1\s*(===|!==|==|!=|>=|<=|>|<)\s*([\'"])(.*)\4$/', $condition, $matches)) {
         $left = var_export($matches[2], true);
         $operator = $matches[3];
-        $right = var_export($matches[4], true);
+        $right = var_export($matches[5], true);
         return "({$left} {$operator} {$right})";
     }
     
