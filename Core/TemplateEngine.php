@@ -520,6 +520,19 @@ PHP;
 {
     $condition = trim($condition);
     
+    // *Обработка строковых литералов с кавычками
+    if (preg_match('/^([\'"])(.*)\1$/', $condition, $matches)) {
+        return var_export($matches[2], true);
+    }
+
+    // *Специальная обработка для сравнения строковых литералов
+    if (preg_match('/^([\'"])(.*)\1\s*(===|!==|==|!=|>=|<=|>|<)\s*([\'"])(.*)\3$/', $condition, $matches)) {
+        $left = var_export($matches[2], true);
+        $operator = $matches[3];
+        $right = var_export($matches[4], true);
+        return "({$left} {$operator} {$right})";
+    }
+    
     $condition = preg_replace('/\bnot\s+/', '!', $condition);
     
     // Обработка числовых литералов
@@ -527,11 +540,12 @@ PHP;
         return $condition;
     }
     
-    // Обработка строковых литералов
+    /*
     if (preg_match('/^([\'"])(.*)\1$/', $condition, $matches)) {
         return var_export($matches[2], true);
     }
-
+    */
+    
      // Специальная обработка для сравнения URI
     if (preg_match('/^([a-zA-Z0-9-_\.]+)\s*==\s*([\'"])(\/[^\'"]*)\2$/', $condition, $uriMatches)) {
         $var = $this->compileVariableAccess($uriMatches[1]);
