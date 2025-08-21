@@ -21,7 +21,8 @@ class Validator
         'unique' => 'Значение поля :field уже существует',
         'exists' => 'Выбранное значение для :field не существует',
     ];
-
+    protected array $fieldNames = [];
+    
     public function __construct(array $data, array $rules)
     {
         $this->data = $data;
@@ -51,18 +52,37 @@ class Validator
         $this->errors[$field][] = $message;
     }
 
+    public function setFieldNames(array $fieldNames): void
+    {
+        $this->fieldNames = $fieldNames;
+    }
+    
     protected function applyRule(string $field, string $rule): void
     {
+        /*
+        $value = $this->data[$field] ?? null;
+        // Обработка параметров правила (например, max:255)
+        $ruleParts = explode(':', $rule, 2);
+        $ruleName = $ruleParts[0];
+        $ruleParams = $ruleParts[1] ?? null;
+        // Подстановка значения в сообщение об ошибке
+        $message = $this->messages[$ruleName] ?? 'Поле :field не прошло валидацию';
+        $message = str_replace(':field', $field, $message);
+        */
+
         $value = $this->data[$field] ?? null;
 
         // Обработка параметров правила (например, max:255)
         $ruleParts = explode(':', $rule, 2);
         $ruleName = $ruleParts[0];
         $ruleParams = $ruleParts[1] ?? null;
-
+    
+        // Использование читаемого имени поля, если оно задано, или оставляем оригинальное имя
+        $fieldDisplayName = $this->fieldNames[$field] ?? $field;
+        
         // Подстановка значения в сообщение об ошибке
         $message = $this->messages[$ruleName] ?? 'Поле :field не прошло валидацию';
-        $message = str_replace(':field', $field, $message);
+        $message = str_replace(':field', $fieldDisplayName, $message);
 
         switch ($ruleName) {
             case 'required':
