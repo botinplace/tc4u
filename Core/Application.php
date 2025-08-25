@@ -88,46 +88,14 @@ class Application
     {
         try {
             $request = $this->container->get(Request::class);
-            $path = $this->sanitizePath($request::url());
-            
+			$path = $request::path();
+
             $this->router = $this->container->get(Router::class);
             $this->router->dispatch($path);
 
         } catch (\Throwable $e) {
             $this->handleError($e);
         }
-    }
-
-    private function sanitizePath(string $uri): string
-    {
-        $path = filter_var(trim($uri), FILTER_SANITIZE_URL);
-        $path = explode("?", $path, 2)[0];
-
-        // Обработка URI фиксера
-        $path = $this->applyUriFixes($path);
-
-        return $path ?: "/";
-    }
-
-    private function applyUriFixes(string $path): string
-    {
-        if ($uriFixer = Config::get('app.uri_fixer')) {
-            $path = preg_replace(
-                "/^" . preg_quote($uriFixer, "/") . '(\/|$)/', 
-                "/", 
-                $path
-            );
-        }
-
-        if (defined('BASE_URL') && BASE_URL !== "") {
-            $path = preg_replace(
-                "/^\/" . preg_quote(BASE_URL, "/") . '(\/|$)/',
-                "/",
-                $path
-            );
-        }
-
-        return $path;
     }
 
     private function handleError(\Throwable $e): void
