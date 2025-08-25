@@ -4,7 +4,9 @@ namespace Core;
 class Request
 {
     private static ?array $parsedBody = null;
-
+    private static ?string $basePath = null;
+    private static ?string $relativePath = null;
+    
     public static function get(string $key, mixed $default = null, int $filter = FILTER_DEFAULT, array|int $options = 0): mixed
     {
         return filter_input(INPUT_GET, $key, $filter, $options) ?? $default;
@@ -67,6 +69,51 @@ class Request
         return strpos($current, $uri) === 0 && $uri !== '/';
     }
     */
+
+    public static function path(): string
+    {
+        if (self::$relativePath === null) {
+            self::$relativePath = self::applyUriFixes(self::currentUri());
+        }
+        return self::$relativePath;
+    }
+
+    public static function basePath(): string
+    {
+        if (self::$basePath === null) {
+            self::$basePath = self::detectBasePath();
+        }
+        return self::$basePath;
+    }
+
+    private static function detectBasePath(): string
+    {
+        $baseUrl = defined('BASE_URL') ? BASE_URL : '';
+        $configFixer = Config::get('app.uri_fixer', '');
+        
+        return $configFixer ?: $baseUrl;
+    }
+    private static function applyUriFixes(string $path): string
+    {
+        $basePath = self::basePath();
+        
+        if (!$basePath) {
+            return $path ?: '/';
+        }
+
+        $basePath = trim($basePath, '/');
+        
+        if (!$basePath) {
+            return $path ?: '/';
+        }
+
+        // Удаляем basePath из начала URI
+        $pattern = '/^\/' . preg_quote($basePath, '/') . '(\/|$)/';
+        $fixedPath = preg_replace($pattern, '/', $path);
+
+        return $fixedPath ?: '/';
+    }
+    
     public static function input(string $key, mixed $default = null, int $filter = FILTER_DEFAULT, array|int $options = []): mixed
     {
         $value = $_POST[$key] ?? $_GET[$key] ?? $default;
@@ -197,3 +244,4 @@ class Request
         return null;
     }
 }
+
