@@ -1,6 +1,8 @@
 <?php
 namespace Core;
 
+use Core\Config\Config;
+
 class Request
 {
     private static ?array $parsedBody = null;
@@ -244,4 +246,5 @@ class Request
         return null;
     }
 }
+
 
