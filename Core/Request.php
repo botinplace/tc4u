@@ -99,21 +99,19 @@ class Request
     {
         $basePath = self::basePath();
         
-        if (!$basePath) {
+        if (empty($basePath) || $basePath === '/') {
             return $path ?: '/';
         }
 
-        $basePath = trim($basePath, '/');
+        $basePath = '/' . trim($basePath, '/');
         
-        if (!$basePath) {
-            return $path ?: '/';
+        // Если путь начинается с basePath, удаляем его
+        if (strpos($path, $basePath) === 0) {
+            $fixedPath = substr($path, strlen($basePath));
+            return $fixedPath ?: '/';
         }
-
-        // Удаляем basePath из начала URI
-        $pattern = '/^\/' . preg_quote($basePath, '/') . '(\/|$)/';
-        $fixedPath = preg_replace($pattern, '/', $path);
-
-        return $fixedPath ?: '/';
+        
+        return $path ?: '/';
     }
     
     public static function input(string $key, mixed $default = null, int $filter = FILTER_DEFAULT, array|int $options = []): mixed
@@ -246,5 +244,6 @@ class Request
         return null;
     }
 }
+
 
 
