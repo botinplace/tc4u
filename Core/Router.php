@@ -49,20 +49,20 @@ class Router
         $routes = [];
             
         if(!file_exists($this->routesFile)){
-           trigger_error("Файл $filePath отсутствует!.");       
+           trigger_error("Файл {$this->routesFile} отсутствует!.");       
         }
 
         try {
             $routes = include $this->routesFile;
 
         if (!is_array($routes)) {
-			trigger_error("Данные в файле $filePath должны быть массивом.");
+			trigger_error("Данные в файле {$this->routesFile} должны быть массивом.");
             $routes=[];
         }
         
         
     } catch (\Throwable $e) {
-		trigger_error("Ошибка при загрузке файла $this->routesFile: " . $e->getMessage(), E_USER_WARNING);
+		trigger_error("Ошибка при загрузке файла {$this->routesFile}: " . $e->getMessage(), E_USER_WARNING);
         $routes = [];
     }
         $this->setRoutes($routes);
@@ -250,3 +250,4 @@ class Router
         }, $this->routes);
     }
 }
+
