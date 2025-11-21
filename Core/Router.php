@@ -173,13 +173,13 @@ class Router
     {
         // Если роут требует авторизации и пользователь не авторизован
         if ($route->needAuth && !$this->isUserAuthenticated()) {
-	    error_log("Попытка несанкционированного доступа к маршруту: " . $route->path);
+	    //error_log("Попытка несанкционированного доступа к маршруту: " . $route->path);
             $this->response->redirect( Config::get('app.auth.path') );
         }
 
 	// Если роут только для гостей и пользователь авторизован
         if ($route->onlyforguest && $this->isUserAuthenticated()) {
-	    error_log("Маршрут доступен только для гостей: " . $route->path);
+	    //error_log("Маршрут доступен только для гостей: " . $route->path);
             $this->response->redirect( Config::get('app.uri_fixer') );
         }
 
@@ -250,4 +250,5 @@ class Router
         }, $this->routes);
     }
 }
+
 
